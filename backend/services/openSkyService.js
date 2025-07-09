@@ -6,6 +6,7 @@ const axios = require("axios");
  * @param {string} icao24 - The unique ICAO 24-bit transponder address of the aircraft.
  * @returns {object|null} - Live data object or null if not found.
  */
+
 const getLiveTrackingData = async (icao24) => {
   if (!icao24) {
     return null;
@@ -19,6 +20,12 @@ const getLiveTrackingData = async (icao24) => {
         params: {
           icao24: icao24.toLowerCase(), // API expects lowercase
         },
+        // --- ✅ الإصلاح النهائي هنا: استخدام User-Agent يحاكي متصفح حقيقي ---
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
+        },
+        // ----------------------------------------------------
       }
     );
 

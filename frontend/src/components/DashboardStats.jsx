@@ -1,27 +1,17 @@
-// src/components/DashboardStats.js
 import React from "react";
-// Import icons for the stat cards
 import { FaPlane, FaClock, FaTimesCircle } from "react-icons/fa";
 
-// A reusable component for a single statistic card
-const StatCard = ({ icon, label, value, className }) => (
-  <div className={`stat-card ${className}`}>
+const StatCard = ({ icon, value, label, type }) => (
+  <div className={`stat-card ${type}`}>
     <div className="stat-icon">{icon}</div>
     <div className="stat-info">
-      <span className="stat-value">{value}</span>
-      <span className="stat-label">{label}</span>
+      <div className="stat-value">{value}</div>
+      <div className="stat-label">{label}</div>
     </div>
   </div>
 );
 
-/**
- * A component that displays key statistics about the flight data.
- * @param {object} props - Component props.
- * @param {Array} props.flights - The array of flight data.
- */
 const DashboardStats = ({ flights }) => {
-  // Calculate statistics based on the flight data
-  const totalFlights = flights.length;
   const delayedCount = flights.filter((f) => f.status === "Delayed").length;
   const cancelledCount = flights.filter((f) => f.status === "Cancelled").length;
 
@@ -29,21 +19,21 @@ const DashboardStats = ({ flights }) => {
     <div className="stats-container">
       <StatCard
         icon={<FaPlane />}
+        value={flights.length}
         label="Total Flights Tracked"
-        value={totalFlights}
-        className="total"
+        type="total"
       />
       <StatCard
         icon={<FaClock />}
-        label="Delayed Flights"
         value={delayedCount}
-        className="delayed"
+        label="Delayed Flights"
+        type="delayed"
       />
       <StatCard
         icon={<FaTimesCircle />}
-        label="Cancelled Flights"
         value={cancelledCount}
-        className="cancelled"
+        label="Cancelled Flights"
+        type="cancelled"
       />
     </div>
   );

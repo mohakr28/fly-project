@@ -1,394 +1,522 @@
 /* ==================================================================
-  Global Design System & Variables
+  Next-Gen Professional UI - Responsive & Dark Mode Ready
  ================================================================== */
+
+/* ==================================
+   1. Design Tokens (Themes & Variables)
+   ================================== */
 :root {
-  /* Font */
-  --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
-
-  /* Refined Color Palette */
-  --primary-color: #4f46e5;
-  --primary-light: #eef2ff;
-  --danger-color: #ef4444;
-  --danger-light: #fee2e2;
-  --warning-color: #f97316;
-  --warning-light: #ffedd5;
-
-  /* Neutral & Background Colors */
-  --bg-color: #f8f9fa;
-  --card-bg: #ffffff;
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --border-color: #e5e7eb;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  /* Light Theme */
+  --bg-primary: #f0f2f5; /* Light Gray */
+  --bg-secondary: #ffffff; /* White */
+  --text-primary: #1a202c; /* Dark Slate */
+  --text-secondary: #718096; /* Medium Slate */
+  --border-color: #e2e8f0; /* Light Slate */
+  --primary-accent: #4f46e5; /* Indigo */
+  --primary-accent-light: #eef2ff;
+  --danger-color: #e53e3e; /* Red */
+  --danger-bg: #fff5f5;
+  --danger-text: #c53030;
+  --warning-color: #dd6b20; /* Orange */
+  --warning-bg: #fffaf0;
+  --warning-text: #b75c1c;
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* ==================================================================
-  General Body & Layout Styles
- ================================================================== */
+[data-theme="dark"] {
+  /* Dark Theme */
+  --bg-primary: #1a202c; /* Darkest Slate */
+  --bg-secondary: #2d3748; /* Darker Slate */
+  --text-primary: #f7fafc; /* White */
+  --text-secondary: #a0aec0; /* Lighter Slate */
+  --border-color: #4a5568; /* Medium Slate */
+  --primary-accent-light: rgba(79, 70, 229, 0.2);
+  --danger-bg: rgba(229, 62, 62, 0.15);
+  --danger-text: #f56565;
+  --warning-bg: rgba(221, 107, 32, 0.15);
+  --warning-text: #f6ad55;
+}
+
+/* ==================================
+       2. Base & Layout Styles
+       ================================== */
 body {
-  font-family: var(--font-family-sans);
-  background-color: var(--bg-color);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  background-color: var(--bg-primary);
   color: var(--text-primary);
   margin: 0;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .dashboard-container {
   max-width: 1600px;
-  margin: 30px auto;
-  padding: 0 30px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ==================================
+       3. Header & Control Panel (REFINED)
+       ================================== */
+.main-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
 }
-
-.dashboard-header {
-  margin-bottom: 30px;
-}
-
-.dashboard-header h1 {
-  font-size: 2.25rem;
+.main-header h1 {
+  font-size: 1.875rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  margin: 0;
 }
-
-/* ==================================================================
-  Statistics Cards Section
- ================================================================== */
-.stats-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
+.theme-toggle-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 90vw;
-  margin-bottom: 40px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+.theme-toggle-btn:hover {
+  color: var(--primary-accent);
+  box-shadow: var(--shadow-sm);
+}
+.control-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+  align-items: center;
+  justify-content: space-between;
+}
+.status-filter-group {
+  display: flex;
+  gap: 8px;
+}
+.status-filter-group button {
+  background: none;
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+.status-filter-group button.active {
+  background-color: var(--primary-accent);
+  color: white;
+  border-color: var(--primary-accent);
 }
 
+.search-and-date-controls {
+  display: flex;
+  gap: 16px;
+  flex-grow: 1;
+  justify-content: flex-end;
+}
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  max-width: 400px;
+}
+.input-wrapper svg {
+  position: absolute;
+  left: 12px;
+  color: var(--text-secondary);
+}
+.input-wrapper input {
+  width: 100%;
+  padding: 8px 12px 8px 36px; /* Padding-left to make space for icon */
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+.input-wrapper input:focus {
+  outline: none;
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 3px var(--primary-accent-light);
+}
+.clear-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+}
+.date-filter {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+[data-theme="dark"] .date-filter {
+  color-scheme: dark;
+}
+[data-theme="light"] .date-filter {
+  color-scheme: light;
+}
+
+/* ==================================
+       4. Dashboard Stats
+       ================================== */
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
 .stat-card {
-  background-color: var(--card-bg);
-  padding: 24px;
+  background-color: var(--bg-secondary);
+  padding: 20px;
   border-radius: 12px;
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   gap: 16px;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease-out;
 }
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
 .stat-icon {
-  font-size: 1.8rem;
-  padding: 16px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-}
-.stat-card.total .stat-icon {
-  color: var(--primary-color);
-  background-color: var(--primary-light);
+  font-size: 1.5rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background-color: var(--primary-accent-light);
+  color: var(--primary-accent);
 }
 .stat-card.delayed .stat-icon {
+  background-color: var(--warning-bg);
   color: var(--warning-color);
-  background-color: var(--warning-light);
 }
 .stat-card.cancelled .stat-icon {
+  background-color: var(--danger-bg);
   color: var(--danger-color);
-  background-color: var(--danger-light);
 }
-
 .stat-info {
   display: flex;
   flex-direction: column;
 }
 .stat-value {
-  font-size: 2.25rem;
+  font-size: 1.75rem;
   font-weight: 700;
 }
 .stat-label {
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
-  font-weight: 500;
 }
 
-/* ==================================================================
-  Filter Bar Styles
- ================================================================== */
-.filter-container {
-  background: var(--card-bg);
-  padding: 20px 24px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  margin-bottom: 40px;
-  box-shadow: var(--shadow-sm);
-}
-
-.filter-form {
+/* ==================================
+       5. Advanced Flight Card (RE-DESIGNED)
+       ================================== */
+.flight-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 16px;
-  align-items: center;
-  justify-content: center;
-  width: calc(90vw - 48px);
-}
-.filter-form input {
-  padding: 12px 15px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  font-size: 1rem;
-  font-family: inherit;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.filter-form input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--primary-light);
-}
-.filter-form button {
-  padding: 12px 15px;
-  border-radius: 8px;
-  background-color: var(--primary-color);
-  color: white;
-  font-weight: 600;
-  font-size: 1rem;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
-}
-.filter-form button:hover {
-  background-color: #4338ca;
-}
-.filter-form button:active {
-  transform: scale(0.98);
-}
-
-/* ==================================================================
-  Flight Cards using Flexbox
- ================================================================== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.flights-grid {
-  display: flex;
-  flex-wrap: wrap;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
-  /* Negative margin to counteract the padding on the items, creating a clean edge */
-  margin: -12px;
 }
-
 .flight-card {
-  /* Flex properties for responsive wrapping */
-  flex-grow: 1; /* Allow cards to grow and fill space */
-  flex-basis: 380px; /* Minimum width before wrapping */
-
-  /* Spacing handled by the parent's gap and this item's margin */
-  margin: 12px;
-
-  background: var(--card-bg);
+  background-color: var(--bg-secondary);
   border-radius: 12px;
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  border-left-width: 4px;
+  border-left-width: 5px; /* Change border to the left for emphasis */
+  border-top-width: 1px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease-out;
-  animation: fadeIn 0.5s ease-out forwards;
 }
-.flight-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-5px);
+.flight-card.Delayed {
+  border-left-color: var(--warning-color);
 }
-
+.flight-card.Cancelled {
+  border-left-color: var(--danger-color);
+}
 .card-header {
-  padding: 16px 20px;
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border-color);
 }
-.card-header h3 {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-.status-text {
-  font-weight: 600;
-  font-size: 0.75rem;
-  letter-spacing: 0.5px;
-  padding: 4px 8px;
-  border-radius: 9999px;
-  color: white;
-}
-span.status-text[style*="var(--warning-color)"] {
-  background-color: var(--warning-color);
-}
-span.status-text[style*="var(--danger-color)"] {
-  background-color: var(--danger-color);
-}
-
-.card-body {
-  padding: 24px 20px;
-}
-.flight-path-timeline {
+.flight-identity {
   display: flex;
-  align-items: center;
-}
-.timeline-point {
-  display: flex;
-  flex-direction: column;
-}
-.timeline-point:last-child {
-  text-align: right;
-  align-items: flex-end;
-}
-.timeline-airport {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1;
-}
-.timeline-time {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  display: flex;
-  flex-direction: column;
-  margin-top: 8px;
-}
-.timeline-line {
-  flex-grow: 1;
-  border-bottom: 1px solid var(--border-color);
-  margin: 0 16px;
-  position: relative;
-  top: -12px;
-}
-.timeline-line svg {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--text-secondary);
-  background-color: var(--card-bg);
-  padding: 0 5px;
-}
-.card-footer {
-  padding: 12px 20px;
-  background-color: var(--bg-color);
-  border-top: 1px solid var(--border-color);
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: baseline;
   gap: 8px;
-  font-size: 0.875rem;
-  margin-top: auto;
-}
-
-/* ==================================================================
-  Loading & No Results States
- ================================================================== */
-.loading-spinner {
-  border: 4px solid var(--primary-light);
-  border-top: 4px solid var(--primary-color);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin: 80px auto;
-}
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.no-results {
-  width: 100%; /* Make it take the full width of the flex container */
-  text-align: center;
-  padding: 60px 20px;
-  background-color: var(--card-bg);
-  border-radius: 12px;
-  border: 1px dashed var(--border-color);
-}
-.no-results h2 {
-  font-size: 1.25rem;
-  color: var(--text-primary);
   font-weight: 600;
+  font-size: 1.1rem;
 }
-.no-results p {
+.flight-date {
   color: var(--text-secondary);
-  max-width: 450px;
-  margin: 8px auto 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.flight-status-badge {
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.flight-status-badge.delayed {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+.flight-status-badge.cancelled {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+}
+.card-content {
+  padding: 16px;
+  flex-grow: 1;
+}
+.flight-path {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.path-icon {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+}
+.airport-details {
+  text-align: center;
+}
+.airport-code {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+.time-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 0.9rem;
+}
+.time-actual {
+  color: var(--danger-color);
+  font-weight: bold;
+}
+.divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 16px 0;
+}
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  font-size: 0.9rem;
+}
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+.detail-item svg {
+  margin-top: 3px;
+  min-width: 14px;
+  flex-shrink: 0;
+}
+.detail-item strong {
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-right: 4px;
 }
 
-/* ==================================================================
-  Responsive Design Adjustments
- ================================================================== */
+/* ==================================
+       6. Responsive Design
+       ================================== */
+@media (max-width: 992px) {
+  .control-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-and-date-controls {
+    justify-content: flex-start;
+  }
+}
 @media (max-width: 768px) {
   .dashboard-container {
-    padding: 0 20px;
-    margin: 20px auto;
+    padding: 16px;
   }
-  .dashboard-header h1 {
-    font-size: 1.875rem;
+  .main-header h1 {
+    font-size: 1.5rem;
   }
 }
-
-@media (max-width: 600px) {
-  .flight-card {
-    flex-basis: 100%; /* On small screens, make each card take full width */
-  }
-
-  .flight-path-timeline {
+@media (max-width: 480px) {
+  .status-filter-group {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+    align-items: stretch;
+    width: 100%;
   }
-  .timeline-line {
-    display: none;
+  .search-and-date-controls {
+    flex-direction: column;
   }
-  .timeline-point:last-child {
-    align-items: flex-start;
+  .input-wrapper {
+    max-width: 100%;
   }
-  .timeline-point:first-child {
-    position: relative;
+  .airport-code {
+    font-size: 1.5rem;
   }
-  .timeline-point:first-child::after {
-    content: "";
-    position: absolute;
-    left: 10px;
-    top: 40px;
-    bottom: -20px;
-    border-left: 2px dashed var(--border-color);
-  }
-  .timeline-airport {
-    font-size: 1.75rem;
-  }
-
-  .filter-form {
-    grid-template-columns: 1fr;
+  .details-grid {
+    grid-template-columns: 1fr; /* Stack details on small screens */
   }
 }
-.results-container {
-  max-width: 90vw;
+
+/* ==================================
+       7. Loading & Empty States
+       ================================== */
+.no-results-pro {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+}
+.no-results-pro svg {
+  font-size: 3rem;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+.no-results-pro h2 {
+  margin: 0;
+  color: var(--text-primary);
+}
+.no-results-pro p {
+  color: var(--text-secondary);
+  max-width: 400px;
+  margin: 8px auto 0;
+}
+/* ==================================
+       8. Admin & Event Review UI (NEW)
+       ================================== */
+.dashboard-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 24px;
+}
+.tab-btn {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  position: relative;
+  top: 2px;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn:hover {
+  color: var(--text-primary);
+}
+.tab-btn.active {
+  color: var(--primary-accent);
+  border-bottom-color: var(--primary-accent);
+}
+
+.event-review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.event-review-card {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.event-review-card h3 {
+  font-size: 1.1rem;
+  margin: 0;
+  line-height: 1.4;
+}
+.event-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.event-meta strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.event-source-link {
+  color: var(--primary-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.event-source-link:hover {
+  text-decoration: underline;
+}
+.event-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto; /* Push actions to the bottom */
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+.event-actions .action-btn {
+  flex-grow: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+.approve-btn {
+  background-color: #2f855a; /* Green */
+  color: white;
+  border-color: #2f855a;
+}
+.approve-btn:hover {
+  background-color: #276749;
+}
+.reject-btn {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-text);
+}
+.reject-btn:hover {
+  background-color: rgba(229, 62, 62, 0.25);
+}
+.approval-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.approval-options p {
+  font-size: 0.9rem;
+  margin: 0 0 4px;
+  font-weight: 600;
 }

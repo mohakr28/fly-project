@@ -1,157 +1,131 @@
-// src/components/FlightCard.js
-import React from "react";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import {
   FaPlane,
-  FaExclamationTriangle,
-  FaSatelliteDish,
-  FaMapMarkerAlt,
-  FaCloud,
-  FaSun,
-  FaSnowflake,
-  FaBolt,
   FaInfoCircle,
+  FaClock,
+  FaCalendarDay,
+  FaChevronDown,
+  FaFighterJet,
 } from "react-icons/fa";
+import WeatherInfo from "./WeatherInfo";
 
-// دالة مساعدة لاختيار أيقونة الطقس
-const getWeatherIcon = (condition) => {
-  if (!condition) return <FaCloud />;
-  const lowerCaseCondition = condition.toLowerCase();
-  if (lowerCaseCondition.includes("snow")) return <FaSnowflake />;
-  if (lowerCaseCondition.includes("thunder")) return <FaBolt />;
-  if (lowerCaseCondition.includes("rain")) return <FaCloud />;
-  if (lowerCaseCondition.includes("clear")) return <FaSun />;
-  return <FaCloud />;
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+};
+
+const detailsVariants = {
+  hidden: { opacity: 0, height: 0 },
+  visible: { opacity: 1, height: "auto", transition: { duration: 0.3 } },
+  exit: { opacity: 0, height: 0, transition: { duration: 0.2 } },
 };
 
 const FlightCard = ({ flight }) => {
-  const isDelayed = flight.status === "Delayed";
-  const statusColor = isDelayed
-    ? "var(--warning-color)"
-    : "var(--danger-color)";
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const hasLiveData =
-    flight.live && flight.live.latitude && flight.live.longitude;
-  const isOnGround = hasLiveData && flight.live.onGround;
-  const isAirborne = hasLiveData && !flight.live.onGround;
+  const scheduledDepTime = flight.scheduledDeparture
+    ? format(new Date(flight.scheduledDeparture), "HH:mm")
+    : "--:--";
+  const actualDepTime = flight.actualDeparture
+    ? format(new Date(flight.actualDeparture), "HH:mm")
+    : null;
+  const flightDate = flight.scheduledDeparture
+    ? format(new Date(flight.scheduledDeparture), "dd MMM yyyy")
+    : "N/A";
 
-  const LiveIndicator = () => {
-    /* ... (لا تغيير هنا، يمكنك نسخها من الردود السابقة) ... */
-  };
-
-  // مكون صغير لعرض معلومات الطقس
-  const WeatherInfo = ({ weather }) => {
-    if (!weather?.condition) return null;
-    return (
-      <span
-        title={`${weather.condition}, ${weather.temperature}°C, ${weather.windSpeed} km/h wind`}
-      >
-        {getWeatherIcon(weather.condition)}
-      </span>
-    );
-  };
+  // ✅ استخراج أسماء المطارات بأمان
+  const departureAirportName =
+    flight.departure?.airport?.name || "Unknown Airport";
+  const arrivalAirportName = flight.arrival?.airport?.name || "Unknown Airport";
 
   return (
-    <div className="flight-card" style={{ borderLeftColor: statusColor }}>
+    <motion.div
+      layout
+      className={`flight-card ${flight.status}`}
+      variants={cardVariants}
+    >
       <div className="card-header">
-        <h3>{flight.flightNumber.toUpperCase()}</h3>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {/* ... (مؤشر الموقع المباشر لم يتغير) ... */}
-          <span
-            className="status-text"
-            style={{ backgroundColor: statusColor }}
-          >
-            {flight.status.toUpperCase()}
-          </span>
+        <div className="flight-identity">
+          {flight.flightNumber.toUpperCase()}
         </div>
+        <div className="flight-date">{flightDate}</div>
       </div>
 
       <div className="card-body">
-        <div className="flight-path-timeline">
-          <div className="timeline-point">
-            <div className="timeline-airport">
-              {flight.departureAirport.toUpperCase()}{" "}
-              {flight.weatherInfo && (
-                <WeatherInfo weather={flight.weatherInfo.departure} />
-              )}
-            </div>
-            <div className="timeline-time">
-              <span>
-                Scheduled:{" "}
-                {format(new Date(flight.scheduledDeparture), "HH:mm")}
-              </span>
-              {isDelayed && (
-                <span>
-                  Actual:{" "}
-                  {flight.actualDeparture
-                    ? format(new Date(flight.actualDeparture), "HH:mm")
-                    : "-"}
-                </span>
-              )}
-            </div>
+        <div className="flight-path">
+          <div className="airport-details">
+            <div className="airport-code">{flight.departureAirport}</div>
+            {/* ✅ إضافة اسم المطار هنا */}
+            <div className="airport-name">{departureAirportName}</div>
           </div>
-          <div className="timeline-line">
-            <FaPlane />
+          <div className="path-line"></div>
+          <div className="airport-details">
+            <div className="airport-code">{flight.arrivalAirport}</div>
+            {/* ✅ إضافة اسم المطار هنا */}
+            <div className="airport-name">{arrivalAirportName}</div>
           </div>
-          <div className="timeline-point">
-            <div className="timeline-airport">
-              {flight.arrivalAirport.toUpperCase()}{" "}
-              {flight.weatherInfo && (
-                <WeatherInfo weather={flight.weatherInfo.arrival} />
-              )}
-            </div>
-            <div className="timeline-time">
-              <span>
-                {format(new Date(flight.scheduledDeparture), "MMM dd, yyyy")}
-              </span>
-            </div>
-          </div>
+        </div>
+        <div className="time-info">
+          <span>Scheduled: {scheduledDepTime}</span>
+          {actualDepTime && (
+            <span className="time-actual">Actual: {actualDepTime}</span>
+          )}
         </div>
       </div>
-
-      {/* عرض سياق الإلغاء إذا وجد */}
-      {flight.cancellationContext && (
-        <div
-          style={{
-            padding: "10px 20px",
-            fontSize: "0.8rem",
-            backgroundColor: "#fffbe6",
-            color: "#92400e",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            borderTop: "1px solid var(--border-color)",
-          }}
-        >
-          <FaInfoCircle />
-          {flight.cancellationContext}
-        </div>
-      )}
 
       <div className="card-footer">
-        <FaExclamationTriangle style={{ color: statusColor }} />
-        <span>
-          {isDelayed
-            ? `Delayed by ${flight.delayDuration} minutes`
-            : "This flight was cancelled"}
-        </span>
-        {hasLiveData && (
-          <a
-            href={`https://www.google.com/maps?q=${flight.live.latitude},${flight.live.longitude}&z=14`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              marginLeft: "auto",
-              color: "var(--primary-color)",
-              fontWeight: "600",
-              textDecoration: "none",
-            }}
-          >
-            Show on Map
-          </a>
-        )}
+        <button
+          className="details-toggle"
+          onClick={() => setDetailsOpen(!detailsOpen)}
+        >
+          <span>Details</span>
+          <motion.div animate={{ rotate: detailsOpen ? 180 : 0 }}>
+            <FaChevronDown />
+          </motion.div>
+        </button>
+        <AnimatePresence>
+          {detailsOpen && (
+            <motion.div
+              className="details-content"
+              variants={detailsVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+            >
+              <WeatherInfo
+                weather={flight.weatherInfo?.departure}
+                type="Departure"
+              />
+              <WeatherInfo
+                weather={flight.weatherInfo?.arrival}
+                type="Arrival"
+              />
+              {flight.cancellationContext && (
+                <div className="detail-item">
+                  <FaInfoCircle /> <strong>Reason:</strong>{" "}
+                  {flight.cancellationContext}
+                </div>
+              )}
+              {flight.delayDuration > 0 && (
+                <div className="detail-item">
+                  <FaClock /> <strong>Delay:</strong> {flight.delayDuration}{" "}
+                  minutes
+                </div>
+              )}
+              {flight.aircraft?.model && (
+                <div className="detail-item">
+                  <FaFighterJet /> <strong>Aircraft:</strong>{" "}
+                  {flight.aircraft.model}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
