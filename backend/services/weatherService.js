@@ -3,21 +3,73 @@ const axios = require("axios");
 const metarParser = require("metar-parser");
 
 const KNOTS_TO_KMH = 1.852;
+const MILES_TO_METERS = 1609.34;
 
-// ✅ دالة مساعدة جديدة لتهيئة التاريخ بالشكل الصحيح الذي يتطلبه الـ API
 const formatDateForApi = (date) => {
   const pad = (num) => num.toString().padStart(2, "0");
-
   const year = date.getUTCFullYear();
   const month = pad(date.getUTCMonth() + 1);
   const day = pad(date.getUTCDate());
   const hours = pad(date.getUTCHours());
   const minutes = pad(date.getUTCMinutes());
-
   return `${year}${month}${day}_${hours}${minutes}`;
 };
 
-// دالة لجلب أحدث تقرير طقس (للحالات المتأخرة)
+const getTAF = async (icaoCode) => {
+  if (!icaoCode) return null;
+  try {
+    const response = await axios.get(
+      "https://aviationweather.gov/api/data/dataserver",
+      {
+        params: {
+          requestType: "retrieve",
+          dataSource: "tafs",
+          stationString: icaoCode.toUpperCase(),
+          hoursBeforeNow: 4,
+          format: "json",
+          mostRecent: "true",
+        },
+        timeout: 8000,
+      }
+    );
+    return response.data?.[0]?.rawTaf || null;
+  } catch (error) {
+    console.error(`Failed to fetch TAF for ${icaoCode}: ${error.message}`);
+    return null;
+  }
+};
+
+const processWeatherData = (metarData) => {
+  if (!metarData || !metarData.rawOb) return null;
+  const metarString = metarData.rawOb;
+  const parsedData = metarParser(metarString);
+  if (!parsedData) return null;
+
+  // --- ✅ الإصلاح النهائي هنا ---
+  // 1. استخدام الحقل الصحيح `visib` بدلاً من `visib_sm`.
+  // 2. التحقق من أنه يحتوي على قيمة رقمية قبل تحويلها.
+  const visibilityInMeters =
+    metarData.visib && !isNaN(parseFloat(metarData.visib))
+      ? Math.round(parseFloat(metarData.visib) * MILES_TO_METERS)
+      : parsedData.visibility?.meters_float; // الخيار البديل
+
+  return {
+    condition: metarString,
+    temperature: parsedData.temperature?.celsius,
+    windSpeed:
+      typeof parsedData.wind?.speedKt === "number"
+        ? Math.round(parsedData.wind.speedKt * KNOTS_TO_KMH)
+        : undefined,
+    visibility: visibilityInMeters, // الآن سيتم حفظ القيمة الصحيحة
+    cloudLayers: (parsedData.clouds || []).map((c) => ({
+      cover: c.code,
+      height: c.altitude,
+    })),
+    // لا نحتاج لجلب الـ TAF حاليا لأنه لا يستخدم
+    // taf: tafString,
+  };
+};
+
 const getLatestWeather = async (icaoCode) => {
   if (!icaoCode) return null;
   try {
@@ -27,27 +79,13 @@ const getLatestWeather = async (icaoCode) => {
         params: {
           ids: icaoCode.toUpperCase(),
           format: "json",
-          taf: "false",
+          mostRecentForEachStation: "true",
         },
         timeout: 7000,
       }
     );
-
-    if (!response.data || response.data.length === 0) return null;
-    const metarString = response.data[0]?.rawOb;
-    if (!metarString) return null;
-
-    const parsedData = metarParser(metarString);
-    if (!parsedData) return null;
-
-    return {
-      condition: metarString,
-      temperature: parsedData.temperature?.celsius,
-      windSpeed:
-        typeof parsedData.wind?.speedKt === "number"
-          ? Math.round(parsedData.wind.speedKt * KNOTS_TO_KMH)
-          : undefined,
-    };
+    const metarData = response.data?.[0];
+    return processWeatherData(metarData);
   } catch (error) {
     console.error(
       `Failed to fetch latest weather for ${icaoCode}:`,
@@ -57,58 +95,27 @@ const getLatestWeather = async (icaoCode) => {
   }
 };
 
-// دالة لجلب الطقس الأقرب لوقت محدد (للحالات الملغاة)
 const getWeatherAtTime = async (icaoCode, targetTimeISO) => {
   if (!icaoCode || !targetTimeISO) return null;
-
   const targetTime = new Date(targetTimeISO);
-
-  // لا يمكننا جلب بيانات تاريخية من المستقبل
   if (targetTime > new Date()) return null;
 
   try {
-    // --- ✅ التحول إلى الـ API الجديد مع استخدام معلمات دقيقة ---
     const response = await axios.get(
       "https://aviationweather.gov/api/data/metar",
       {
         params: {
           ids: icaoCode.toUpperCase(),
           format: "json",
-          // تحديد وقت النهاية للبحث
           date: formatDateForApi(targetTime),
-          // البحث في الساعة والنصف التي تسبق وقت النهاية
           hoursBefore: 1.5,
-          // طلب أحدث تقرير فقط لكل محطة
           mostRecentForEachStation: "true",
         },
-        timeout: 10000, // زيادة المهلة للطلبات التاريخية
+        timeout: 10000,
       }
     );
-    // --------------------------------------------------------
-
-    if (!response.data || response.data.length === 0) {
-      console.warn(
-        `No historical METAR data found for ${icaoCode} around ${targetTimeISO}.`
-      );
-      return null;
-    }
-
-    // بما أننا طلبنا الأحدث فقط، فالتقرير المطلوب هو الأول في المصفوفة
-    const latestReport = response.data[0];
-    if (!latestReport || !latestReport.rawOb) return null;
-
-    const metarString = latestReport.rawOb;
-    const parsedData = metarParser(metarString);
-    if (!parsedData) return null;
-
-    return {
-      condition: metarString,
-      temperature: parsedData.temperature?.celsius,
-      windSpeed:
-        typeof parsedData.wind?.speedKt === "number"
-          ? Math.round(parsedData.wind.speedKt * KNOTS_TO_KMH)
-          : undefined,
-    };
+    const metarData = response.data?.[0];
+    return processWeatherData(metarData);
   } catch (error) {
     console.error(
       `Failed to fetch historical weather for ${icaoCode}:`,

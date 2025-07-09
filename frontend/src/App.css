@@ -9,6 +9,7 @@
   /* Light Theme */
   --bg-primary: #f0f2f5; /* Light Gray */
   --bg-secondary: #ffffff; /* White */
+  --bg-tertiary: #f7fafc; /* Even Lighter Gray */
   --text-primary: #1a202c; /* Dark Slate */
   --text-secondary: #718096; /* Medium Slate */
   --border-color: #e2e8f0; /* Light Slate */
@@ -20,6 +21,9 @@
   --warning-color: #dd6b20; /* Orange */
   --warning-bg: #fffaf0;
   --warning-text: #b75c1c;
+  --info-color: #3182ce; /* Blue */
+  --info-bg: #ebf8ff;
+  --info-text: #2b6cb0;
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -29,6 +33,7 @@
   /* Dark Theme */
   --bg-primary: #1a202c; /* Darkest Slate */
   --bg-secondary: #2d3748; /* Darker Slate */
+  --bg-tertiary: #1f2738; /* Slightly lighter than secondary */
   --text-primary: #f7fafc; /* White */
   --text-secondary: #a0aec0; /* Lighter Slate */
   --border-color: #4a5568; /* Medium Slate */
@@ -37,11 +42,13 @@
   --danger-text: #f56565;
   --warning-bg: rgba(221, 107, 32, 0.15);
   --warning-text: #f6ad55;
+  --info-bg: rgba(49, 130, 206, 0.15);
+  --info-text: #63b3ed;
 }
 
 /* ==================================
-       2. Base & Layout Styles
-       ================================== */
+         2. Base & Layout Styles
+         ================================== */
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
@@ -58,8 +65,8 @@ body {
 }
 
 /* ==================================
-       3. Header & Control Panel (REFINED)
-       ================================== */
+         3. Header & Control Panel (REFINED)
+         ================================== */
 .main-header {
   display: flex;
   justify-content: space-between;
@@ -179,8 +186,8 @@ body {
 }
 
 /* ==================================
-       4. Dashboard Stats
-       ================================== */
+         4. Dashboard Stats
+         ================================== */
 .stats-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -230,126 +237,17 @@ body {
 }
 
 /* ==================================
-       5. Advanced Flight Card (RE-DESIGNED)
-       ================================== */
+         5. Flight Grid (Shared)
+         ================================== */
 .flight-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
   gap: 24px;
-}
-.flight-card {
-  background-color: var(--bg-secondary);
-  border-radius: 12px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
-  border-left-width: 5px; /* Change border to the left for emphasis */
-  border-top-width: 1px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.flight-card.Delayed {
-  border-left-color: var(--warning-color);
-}
-.flight-card.Cancelled {
-  border-left-color: var(--danger-color);
-}
-.card-header {
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color);
-}
-.flight-identity {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-.flight-date {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-.flight-status-badge {
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.flight-status-badge.delayed {
-  background-color: var(--warning-bg);
-  color: var(--warning-text);
-}
-.flight-status-badge.cancelled {
-  background-color: var(--danger-bg);
-  color: var(--danger-text);
-}
-.card-content {
-  padding: 16px;
-  flex-grow: 1;
-}
-.flight-path {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.path-icon {
-  color: var(--text-secondary);
-  font-size: 1.25rem;
-}
-.airport-details {
-  text-align: center;
-}
-.airport-code {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-.time-info {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  font-size: 0.9rem;
-}
-.time-actual {
-  color: var(--danger-color);
-  font-weight: bold;
-}
-.divider {
-  border: none;
-  border-top: 1px solid var(--border-color);
-  margin: 16px 0;
-}
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
-  font-size: 0.9rem;
-}
-.detail-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  color: var(--text-secondary);
-}
-.detail-item svg {
-  margin-top: 3px;
-  min-width: 14px;
-  flex-shrink: 0;
-}
-.detail-item strong {
-  color: var(--text-primary);
-  font-weight: 500;
-  margin-right: 4px;
 }
 
 /* ==================================
-       6. Responsive Design
-       ================================== */
+         6. Responsive Design
+         ================================== */
 @media (max-width: 992px) {
   .control-panel {
     flex-direction: column;
@@ -379,17 +277,18 @@ body {
   .input-wrapper {
     max-width: 100%;
   }
-  .airport-code {
-    font-size: 1.5rem;
+  .flight-path-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
   }
-  .details-grid {
-    grid-template-columns: 1fr; /* Stack details on small screens */
+  .flight-path-center {
+    transform: rotate(90deg);
   }
 }
 
 /* ==================================
-       7. Loading & Empty States
-       ================================== */
+         7. Loading & Empty States
+         ================================== */
 .no-results-pro {
   grid-column: 1 / -1;
   text-align: center;
@@ -410,8 +309,8 @@ body {
   margin: 8px auto 0;
 }
 /* ==================================
-       8. Admin & Event Review UI (NEW)
-       ================================== */
+         8. Admin & Event Review UI (NEW)
+         ================================== */
 .dashboard-tabs {
   display: flex;
   gap: 8px;
@@ -519,4 +418,232 @@ body {
   font-size: 0.9rem;
   margin: 0 0 4px;
   font-weight: 600;
+}
+
+/* ==================================================================
+    9. Analyst-Focused Card v3 (IMPROVED)
+   ================================================================== */
+
+/* --- Card Structure & Polish --- */
+.flight-card {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  border-left-width: 5px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease-in-out;
+}
+.flight-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+}
+.flight-card.Delayed {
+  border-left-color: var(--warning-color);
+}
+.flight-card.Cancelled {
+  border-left-color: var(--danger-color);
+}
+.divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 0;
+}
+.card-header {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+}
+.flight-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.flight-status-badge {
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.flight-status-badge.delayed {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+.flight-status-badge.cancelled {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+/* --- Flight Path --- */
+.card-content {
+  padding: 16px;
+}
+.flight-path-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: flex-start; /* Align to top for better vertical rhythm */
+  text-align: center;
+  gap: 1rem;
+}
+.airport-main {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.airport-name {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  min-height: 2.4em; /* Reserve space for 2 lines */
+}
+.local-time {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--primary-accent);
+  margin-top: 8px;
+  background-color: var(--primary-accent-light);
+  padding: 4px 6px;
+  border-radius: 6px;
+  display: inline-block;
+}
+[data-theme="dark"] .local-time {
+  color: var(--text-primary);
+}
+.flight-path-center {
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  padding: 0 16px;
+  margin-top: 0.25rem; /* Align with airport code */
+}
+
+/* --- Analysis Section --- */
+.analysis-section {
+  padding: 16px;
+  background-color: var(--bg-tertiary);
+  border-top: 1px solid var(--border-color);
+}
+.analysis-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px 0;
+}
+
+/* --- Analysis Flags --- */
+.analysis-flags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.flag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 16px;
+}
+.flag-item.severe-weather {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+.flag-item.late-report {
+  background-color: var(--info-bg);
+  color: var(--info-text);
+}
+
+/* --- Evidence Blocks --- */
+.evidence-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+}
+.evidence-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+.evidence-content p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* --- Weather Grid within Evidence Block --- */
+.weather-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.weather-block h4 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 6px;
+}
+.weather-details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.weather-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.weather-detail svg {
+  min-width: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* --- Card Footer --- */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background-color: var(--bg-tertiary);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
+}
+.card-footer span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- Highlighting Classes --- */
+.highlight-warning {
+  color: var(--warning-text) !important;
+  font-weight: 600;
+}
+.highlight-good {
+  color: #38a169 !important; /* Green */
+  font-weight: 600;
+}
+[data-theme="dark"] .highlight-good {
+  color: #68d391 !important;
+}
+.highlight-bad {
+  color: var(--danger-text) !important;
+  font-weight: 700;
 }
