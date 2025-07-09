@@ -4,7 +4,9 @@ const mongoose = require("mongoose");
 const connectDB = async () => {
   try {
     // Attempt to connect to MongoDB using the URI from environment variables
+    // The deprecated options have been removed.
     await mongoose.connect(process.env.MONGO_URI);
+
     console.log("MongoDB Connected...");
   } catch (err) {
     // If connection fails, log the error and exit the process
