@@ -1,0 +1,20 @@
+{
+  "FRA": { "name": "Frankfurt am Main", "timezone": "Europe/Berlin" },
+  "MRS": { "name": "Marseille Provence", "timezone": "Europe/Paris" },
+  "BER": { "name": "Berlin Brandenburg", "timezone": "Europe/Berlin" },
+  "PVG": { "name": "Shanghai Pudong Int'l", "timezone": "Asia/Shanghai" },
+  "EZE": {
+    "name": "Buenos Aires-Ezeiza",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "CPH": { "name": "Copenhagen Kastrup", "timezone": "Europe/Copenhagen" },
+  "LHR": { "name": "London Heathrow", "timezone": "Europe/London" },
+  "CDG": { "name": "Paris Charles de Gaulle", "timezone": "Europe/Paris" },
+  "AMS": { "name": "Amsterdam Schiphol", "timezone": "Europe/Amsterdam" },
+  "MAD": { "name": "Madrid-Barajas", "timezone": "Europe/Madrid" },
+  "IST": { "name": "Istanbul Airport", "timezone": "Europe/Istanbul" },
+  "JFK": { "name": "New York-JFK", "timezone": "America/New_York" },
+  "LAX": { "name": "Los Angeles Int'l", "timezone": "America/Los_Angeles" },
+  "ORD": { "name": "Chicago O'Hare", "timezone": "America/Chicago" },
+  "DXB": { "name": "Dubai Int'l", "timezone": "Asia/Dubai" }
+}

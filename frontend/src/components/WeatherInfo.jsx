@@ -1,52 +1,37 @@
 import React from "react";
-import {
-  FaCloud,
-  FaTemperatureHigh,
-  FaWind,
-  FaBolt,
-  FaSnowflake,
-  FaSmog,
-  FaQuestionCircle,
-} from "react-icons/fa";
-
-const getWeatherPhenomena = (metarString) => {
-  if (!metarString) return { text: "N/A", Icon: FaQuestionCircle };
-  if (metarString.includes("TS")) return { text: "Thunderstorm", Icon: FaBolt };
-  if (metarString.includes("SN")) return { text: "Snow", Icon: FaSnowflake };
-  if (metarString.includes("RA")) return { text: "Rain", Icon: FaCloud };
-  if (metarString.includes("FG")) return { text: "Fog", Icon: FaSmog };
-  if (
-    metarString.includes("NCD") ||
-    metarString.includes("CAVOK") ||
-    metarString.includes("CLR")
-  ) {
-    return { text: "Clear", Icon: FaCloud };
-  }
-  return { text: "Cloudy", Icon: FaCloud };
-};
+import { FaEye, FaCloud, FaTemperatureHigh, FaWind } from "react-icons/fa";
 
 const WeatherInfo = ({ weather, type }) => {
-  if (
-    !weather ||
-    weather.temperature === undefined ||
-    weather.windSpeed === undefined
-  ) {
-    return (
-      <div className="detail-item">
-        <strong>{type} Weather:</strong>
-        <span style={{ marginLeft: "4px" }}>Data not available</span>
-      </div>
-    );
+  if (!weather || !weather.condition) {
+    return null;
   }
 
-  const { text: conditionText } = getWeatherPhenomena(weather.condition);
+  const visibilityKm = weather.visibility
+    ? `${(weather.visibility / 1000).toFixed(1)} km`
+    : "N/A";
 
+  // --- ✅ إضافة tooltip لإظهار تقرير TAF عند التحويم ---
   return (
-    <div className="detail-item" title={weather.condition || "Weather details"}>
+    <div
+      className="detail-item"
+      title={weather.taf ? `TAF: ${weather.taf}` : "TAF not available"}
+    >
       <strong>{type}:</strong>
-      <span style={{ marginLeft: "4px" }}>{conditionText},</span>
-      <span>{weather.temperature}°C,</span>
-      <span>{weather.windSpeed} km/h wind</span>
+      <span style={{ marginLeft: "4px" }}>
+        <FaTemperatureHigh /> {weather.temperature}°C
+      </span>
+      <span style={{ marginLeft: "8px" }}>
+        <FaWind /> {weather.windSpeed} km/h
+      </span>
+      <span style={{ marginLeft: "8px" }}>
+        <FaEye /> {visibilityKm}
+      </span>
+      {weather.cloudLayers && weather.cloudLayers.length > 0 && (
+        <span style={{ marginLeft: "8px" }}>
+          <FaCloud /> {weather.cloudLayers[0].cover} @{" "}
+          {weather.cloudLayers[0].height} ft
+        </span>
+      )}
     </div>
   );
 };
