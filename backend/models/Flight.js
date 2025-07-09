@@ -34,7 +34,6 @@ const FlightSchema = new mongoose.Schema(
         windSpeed: Number,
       },
     },
-    // --- الحقل الأساسي لهذا المنطق ---
     isWeatherLocked: { type: Boolean, default: false },
     cancellationContext: {
       type: String, // e.g., "Possible link to ongoing strike."
