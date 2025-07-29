@@ -4,6 +4,8 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const cron = require("node-cron");
 const connectDB = require("./config/db");
+const bcrypt = require("bcryptjs"); // <-- استيراد bcryptjs
+const User = require("./models/User"); // <-- استيراد نموذج المستخدم
 
 // --- تعديل مهم ---
 // استيراد الخدمة الجديدة بدلاً من القديمة
@@ -19,14 +21,48 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/flights", require("./routes/api/flights"));
-// --- ✅ إضافة السطر الجديد هنا ---
 app.use("/api/events", require("./routes/api/events"));
-// ------------------------------
+app.use("/api/auth", require("./routes/api/auth"));
+// --- ✅ إضافة مسار المستخدمين الجديد ---
+app.use("/api/users", require("./routes/api/users"));
+// ------------------------------------
+
+// --- ✅ دالة إنشاء المستخدم الافتراضي ---
+const createDefaultAdmin = async () => {
+  try {
+    const adminEmail = "admin@admin.com";
+    let adminUser = await User.findOne({ email: adminEmail });
+
+    if (!adminUser) {
+      console.log("Default admin user not found. Creating one...");
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash("admin", salt);
+
+      adminUser = new User({
+        name: "admin",
+        email: adminEmail,
+        password: hashedPassword,
+      });
+
+      await adminUser.save();
+      console.log(
+        "Default admin user created with password 'admin'. Please change it immediately."
+      );
+    }
+  } catch (error) {
+    console.error("Error creating default admin user:", error);
+    process.exit(1);
+  }
+};
+// -----------------------------------------
 
 const startApp = async () => {
   try {
     // انتظر حتى يتم الاتصال بقاعدة البيانات بنجاح
     await connectDB();
+
+    // --- ✅ استدعاء الدالة هنا ---
+    await createDefaultAdmin();
 
     // المهمة الرئيسية (كل 15 دقيقة) لجلب بيانات الرحلات من AeroDataBox
     console.log("Scheduling flight data job for every 15 minutes.");

@@ -2,11 +2,13 @@
 const express = require("express");
 const router = express.Router();
 const Event = require("../../models/Event");
+const auth = require("../../middleware/auth"); // <-- استيراد الـ middleware
 
 // @route   GET /api/events/pending
 // @desc    Get all events with 'pending_approval' status
-// @access  Public (for now, can be protected later)
-router.get("/pending", async (req, res) => {
+// @access  Private (محمي الآن)
+router.get("/pending", auth, async (req, res) => {
+  // <-- الـ middleware مطبق هنا
   try {
     const pendingEvents = await Event.find({ status: "pending_approval" }).sort(
       {
@@ -22,8 +24,9 @@ router.get("/pending", async (req, res) => {
 
 // @route   PUT /api/events/:id/update-status
 // @desc    Approve or reject an event
-// @access  Public (for now, can be protected later)
-router.put("/:id/update-status", async (req, res) => {
+// @access  Private (محمي الآن)
+router.put("/:id/update-status", auth, async (req, res) => {
+  // <-- الـ middleware مطبق هنا
   const { status, isExtraordinary } = req.body;
 
   // Basic validation

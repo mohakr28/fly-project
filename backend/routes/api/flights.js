@@ -2,11 +2,13 @@
 const express = require("express");
 const router = express.Router();
 const Flight = require("../../models/Flight");
+const auth = require("../../middleware/auth"); // <-- 1. استيراد الـ middleware
 
 // @route   GET /api/flights
 // @desc    Get all relevant flights with filtering
-// @access  Public
-router.get("/", async (req, res) => {
+// @access  Private (محمي الآن)
+router.get("/", auth, async (req, res) => {
+  // <-- 2. إضافة الـ middleware هنا
   try {
     const { flightDate, flightNumber, departureAirport } = req.query;
 

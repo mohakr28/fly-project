@@ -1,12 +1,19 @@
+// frontend/src/components/Header.jsx
 import React from "react";
+import { FaBars } from "react-icons/fa";
+import { ThemeToggle } from "./ThemeToggle";
 
-const Header = () => {
+const Header = ({ title, toggleSidebar, theme, toggleTheme }) => {
   return (
     <header className="main-header">
-      <h1>Flight Status Dashboard</h1>
-      <p style={{ color: "var(--text-secondary)" }}>
-        Real-time tracking of delayed and cancelled flights
-      </p>
+      <div className="header-left">
+        {/* زر القائمة للجوال */}
+        <button className="mobile-nav-toggle" onClick={toggleSidebar}>
+          <FaBars />
+        </button>
+        <h1>{title}</h1>
+      </div>
+      <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
     </header>
   );
 };

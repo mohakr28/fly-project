@@ -6,6 +6,11 @@
    1. Design Tokens (Themes & Variables)
    ================================== */
 :root {
+  /* Sizing & Layout Variables */
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 88px;
+  --header-height-mobile: 60px;
+
   /* Light Theme */
   --bg-primary: #f0f2f5; /* Light Gray */
   --bg-secondary: #ffffff; /* White */
@@ -47,8 +52,8 @@
 }
 
 /* ==================================
-         2. Base & Layout Styles
-         ================================== */
+             2. Base & Layout Styles (REVISED)
+             ================================== */
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
@@ -58,25 +63,71 @@ body {
   transition: background-color 0.3s, color 0.3s;
 }
 
+.app-layout {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  padding: 24px;
+  width: calc(100% - var(--sidebar-width));
+  transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* State when sidebar is collapsed on desktop */
+.app-layout.sidebar-collapsed .main-content {
+  margin-left: var(--sidebar-width-collapsed);
+  width: calc(100% - var(--sidebar-width-collapsed));
+}
+
 .dashboard-container {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 24px;
+}
+
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1999; /* Below sidebar, above content */
 }
 
 /* ==================================
-         3. Header & Control Panel (REFINED)
-         ================================== */
+             3. Header & Control Panel (REFINED)
+             ================================== */
 .main-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 .main-header h1 {
   font-size: 1.875rem;
   font-weight: 700;
   margin: 0;
+}
+.mobile-nav-toggle {
+  display: none; /* Hidden on desktop */
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+}
+.mobile-nav-toggle:hover {
+  background: var(--bg-tertiary);
 }
 .theme-toggle-btn {
   background: var(--bg-secondary);
@@ -186,8 +237,8 @@ body {
 }
 
 /* ==================================
-         4. Dashboard Stats
-         ================================== */
+             4. Dashboard Stats
+             ================================== */
 .stats-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -237,8 +288,8 @@ body {
 }
 
 /* ==================================
-         5. Flight Grid (Shared)
-         ================================== */
+             5. Flight Grid (Shared)
+             ================================== */
 .flight-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
@@ -246,9 +297,62 @@ body {
 }
 
 /* ==================================
-         6. Responsive Design
-         ================================== */
+             6. Responsive Design (REVISED)
+             ================================== */
 @media (max-width: 992px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding-top: calc(var(--header-height-mobile) + 24px);
+  }
+  .main-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0 16px;
+    height: var(--header-height-mobile);
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 900;
+    margin-bottom: 0;
+  }
+  .mobile-nav-toggle {
+    display: flex;
+  }
+
+  .sidebar {
+    width: 260px; /* Wider for touch targets */
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 2000;
+  }
+  /* When not collapsed on mobile, it means open */
+  .app-layout:not(.sidebar-collapsed) .sidebar {
+    transform: translateX(0);
+    box-shadow: var(--shadow-md);
+  }
+  /* Show overlay when menu is open */
+  .app-layout:not(.sidebar-collapsed) .overlay {
+    display: block;
+  }
+
+  .sidebar .nav-item span,
+  .sidebar .sidebar-header h2 {
+    opacity: 1 !important;
+    width: auto !important;
+  }
+
+  .sidebar .nav-item,
+  .sidebar.collapsed .nav-item {
+    justify-content: flex-start;
+    gap: 16px;
+  }
+  /* Hide desktop collapse button on mobile */
+  .collapse-btn {
+    display: none !important;
+  }
+
   .control-panel {
     flex-direction: column;
     align-items: stretch;
@@ -257,14 +361,17 @@ body {
     justify-content: flex-start;
   }
 }
+
 @media (max-width: 768px) {
-  .dashboard-container {
+  .dashboard-container,
+  .profile-page {
     padding: 16px;
   }
   .main-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.2rem; /* Smaller title on mobile */
   }
 }
+
 @media (max-width: 480px) {
   .status-filter-group {
     flex-direction: column;
@@ -287,8 +394,8 @@ body {
 }
 
 /* ==================================
-         7. Loading & Empty States
-         ================================== */
+             7. Loading & Empty States
+             ================================== */
 .no-results-pro {
   grid-column: 1 / -1;
   text-align: center;
@@ -308,9 +415,10 @@ body {
   max-width: 400px;
   margin: 8px auto 0;
 }
+
 /* ==================================
-         8. Admin & Event Review UI (NEW)
-         ================================== */
+             8. Admin & Event Review UI (NEW)
+             ================================== */
 .dashboard-tabs {
   display: flex;
   gap: 8px;
@@ -421,8 +529,8 @@ body {
 }
 
 /* ==================================================================
-    9. Analyst-Focused Card v3 (IMPROVED)
-   ================================================================== */
+        9. Analyst-Focused Card v3 (IMPROVED)
+       ================================================================== */
 
 /* --- Card Structure & Polish --- */
 .flight-card {
@@ -646,4 +754,309 @@ body {
 .highlight-bad {
   color: var(--danger-text) !important;
   font-weight: 700;
+}
+
+/* ==================================
+             10. Sidebar (REVISED)
+       ================================== */
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: calc(100vh - 50px);
+  z-index: 1000;
+  transition: width 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-width-collapsed);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 20px;
+  font-size: 1.5rem;
+  color: var(--primary-accent);
+  transition: gap 0.3s ease;
+  overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar-header {
+  gap: 0;
+  justify-content: center;
+}
+
+.sidebar-header h2 {
+  font-size: 1.25rem;
+  margin: 0;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.2s ease, width 0.2s ease;
+}
+.sidebar.collapsed .sidebar-header h2 {
+  opacity: 0;
+  width: 0;
+}
+.sidebar-nav {
+  flex-grow: 1;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 12px;
+  gap: 0;
+}
+.nav-item:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.nav-item.active {
+  background-color: var(--primary-accent-light);
+  color: var(--primary-accent);
+}
+.nav-item span {
+  opacity: 1;
+  transition: opacity 0.2s ease, width 0.2s ease;
+}
+.sidebar.collapsed .nav-item span {
+  opacity: 0;
+  width: 0;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+}
+.logout-btn,
+.collapse-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.logout-btn:hover {
+  color: var(--danger-text) !important;
+}
+.collapse-btn {
+  color: var(--text-secondary);
+}
+.collapse-btn:hover {
+  color: var(--primary-accent);
+}
+.collapse-btn svg {
+  transition: transform 0.3s ease;
+}
+
+/* ==================================
+             11. Auth Pages
+       ================================== */
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+.auth-card {
+  background-color: var(--bg-secondary);
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+.auth-card h2 {
+  font-size: 1.75rem;
+  margin: 0 0 8px;
+}
+.auth-card p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+.input-group {
+  text-align: left;
+  margin-bottom: 20px; /* Increased margin */
+}
+.input-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px; /* Increased margin */
+  font-size: 0.9rem;
+}
+.input-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+.auth-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background-color: var(--primary-accent);
+  color: white;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background-color 0.2s;
+}
+.auth-btn:hover {
+  background-color: #4338ca; /* Darker Indigo */
+}
+.error-message {
+  color: var(--danger-text);
+  background-color: var(--danger-bg);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+.auth-switch {
+  margin-top: 24px;
+  font-size: 0.9rem;
+}
+.auth-switch a {
+  color: var(--primary-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ==================================
+             REVISED: 12. Profile Page
+       ================================== */
+.profile-page {
+  max-width: 900px;
+  margin: auto;
+}
+
+.profile-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 32px;
+  overflow: hidden; /* To contain borders and backgrounds */
+}
+
+.profile-card-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.profile-card-header h3 {
+  font-size: 1.25rem;
+  margin: 0 0 4px 0;
+}
+
+.profile-card-header p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 80%;
+}
+
+.profile-card-body {
+  padding: 24px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.profile-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background-color: var(--bg-tertiary);
+  border-top: 1px solid var(--border-color);
+  margin: 24px -24px -24px -24px; /* Extend to full width */
+}
+
+.profile-card-footer p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.profile-card-footer .auth-btn {
+  width: auto;
+  padding: 10px 20px;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .profile-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .profile-card-footer .auth-btn {
+    width: 100%;
+  }
+}
+
+/* ==================================
+             13. Message Banners
+       ================================== */
+.message-banner {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.message-banner.success {
+  background-color: #e6fffa;
+  color: #2c7a7b;
+  border-color: #b2f5ea;
+}
+.message-banner.error {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: #fed7d7;
+}
+
+[data-theme="dark"] .message-banner.success {
+  background-color: rgba(56, 161, 105, 0.2);
+  color: #9ae6b4;
+  border-color: rgba(56, 161, 105, 0.5);
+}
+[data-theme="dark"] .message-banner.error {
+  background-color: rgba(229, 62, 62, 0.2);
+  color: #f56565;
+  border-color: rgba(229, 62, 62, 0.5);
 }
