@@ -1,57 +1,27 @@
+// frontend/src/components/FlightGrid.jsx
 import React from "react";
 import { motion } from "framer-motion";
-import FlightCardPro from "./FlightCardPro"; // سنستخدم البطاقة الجديدة
+import FlightCardPro from "./FlightCardPro";
 import { FaSearch } from "react-icons/fa";
 
-// تصميم هيكلي أفضل
+// بطاقة هيكلية محسنة مع تأثير النبض
 const SkeletonCard = () => (
-  <div className="flight-card-pro" style={{ padding: "20px" }}>
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        marginBottom: "24px",
-      }}
-    >
-      <div
-        style={{
-          height: "24px",
-          width: "40%",
-          background: "#e2e8f0",
-          borderRadius: "4px",
-        }}
-      ></div>
-      <div
-        style={{
-          height: "24px",
-          width: "25%",
-          background: "#e2e8f0",
-          borderRadius: "4px",
-        }}
-      ></div>
+  <div className="bg-secondary rounded-lg shadow-sm p-4 animate-pulse space-y-4">
+    <div className="flex justify-between items-center">
+      <div className="h-4 bg-tertiary rounded w-1/3"></div>
+      <div className="h-6 bg-tertiary rounded-full w-1/4"></div>
     </div>
-    <div
-      style={{
-        height: "40px",
-        background: "#e2e8f0",
-        borderRadius: "4px",
-        marginBottom: "16px",
-      }}
-    ></div>
-    <div
-      style={{ height: "20px", background: "#e2e8f0", borderRadius: "4px" }}
-    ></div>
+    <div className="h-10 bg-tertiary rounded w-full"></div>
+    <div className="h-20 bg-primary rounded"></div>
   </div>
 );
 
-const NoResults = ({ flightCount }) => (
-  <div className="no-results-pro">
-    <FaSearch />
-    <h2>No Flights to Display</h2>
-    <p>
-      {flightCount > 0
-        ? "No flights match your current filter. Try selecting another category."
-        : "There are currently no delayed or cancelled flights being tracked."}
+const NoResults = () => (
+  <div className="col-span-full flex flex-col items-center justify-center text-center p-12 bg-secondary rounded-lg">
+    <FaSearch className="text-4xl text-text-secondary mb-4" />
+    <h2 className="text-xl font-bold text-text-primary">No Flights Found</h2>
+    <p className="mt-1 text-text-secondary">
+      Try adjusting your search or filter criteria.
     </p>
   </div>
 );
@@ -60,16 +30,16 @@ const gridVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-    },
+    transition: { staggerChildren: 0.05 },
   },
 };
 
 const FlightGrid = ({ flights, loading }) => {
+  const gridClasses = "grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6";
+
   if (loading) {
     return (
-      <div className="flight-grid">
+      <div className={gridClasses}>
         {Array.from({ length: 6 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
@@ -78,12 +48,16 @@ const FlightGrid = ({ flights, loading }) => {
   }
 
   if (flights.length === 0) {
-    return <NoResults flightCount={flights.length} />;
+    return (
+      <div className={gridClasses}>
+        <NoResults />
+      </div>
+    );
   }
 
   return (
     <motion.div
-      className="flight-grid"
+      className={gridClasses}
       variants={gridVariants}
       initial="hidden"
       animate="visible"

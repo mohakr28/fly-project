@@ -3,8 +3,19 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 import Header from "../components/Header";
+import { FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const FormCard = ({ title, description, children }) => (
+  <div className="bg-secondary rounded-lg shadow-sm border border-border-color">
+    <div className="p-6 border-b border-border-color">
+      <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
+      <p className="mt-1 text-sm text-text-secondary">{description}</p>
+    </div>
+    {children}
+  </div>
+);
 
 const Profile = () => {
   const [profileData, setProfileData] = useState({ name: "", email: "" });
@@ -18,11 +29,7 @@ const Profile = () => {
   const { toggleSidebar, theme, toggleTheme } = useOutletContext();
 
   const token = localStorage.getItem("token");
-  const config = {
-    headers: {
-      "x-auth-token": token,
-    },
-  };
+  const config = { headers: { "x-auth-token": token } };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -34,15 +41,12 @@ const Profile = () => {
       }
     };
     fetchUserData();
-  }, []); // Note: Dependency array is empty, config is defined inside.
+  }, []);
 
-  const handleProfileChange = (e) => {
+  const handleProfileChange = (e) =>
     setProfileData({ ...profileData, [e.target.name]: e.target.value });
-  };
-
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = (e) =>
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
-  };
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -86,7 +90,7 @@ const Profile = () => {
   };
 
   return (
-    <div className="profile-page">
+    <div className="max-w-4xl mx-auto flex flex-col gap-8">
       <Header
         title="Account Settings"
         toggleSidebar={toggleSidebar}
@@ -95,100 +99,145 @@ const Profile = () => {
       />
 
       {message.text && (
-        <div className={`message-banner ${message.type}`}>{message.text}</div>
+        <div
+          className={`flex items-center gap-3 p-4 text-sm rounded-md ${
+            message.type === "success"
+              ? "bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300"
+              : "bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300"
+          }`}
+        >
+          {message.type === "success" ? (
+            <FaCheckCircle />
+          ) : (
+            <FaExclamationCircle />
+          )}
+          <span>{message.text}</span>
+        </div>
       )}
 
-      {/* User Profile Card */}
-      <div className="profile-card">
-        <div className="profile-card-header">
-          <h3>Profile Information</h3>
-          <p>Update your account's profile information and email address.</p>
-        </div>
-        <form onSubmit={onProfileSubmit} className="profile-card-body">
-          <div className="form-row">
-            <div className="input-group">
-              <label htmlFor="name">Full Name</label>
+      {/* Profile Information Card */}
+      <FormCard
+        title="Profile Information"
+        description="Update your account's profile information and email address."
+      >
+        <form onSubmit={onProfileSubmit}>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-text-primary mb-1"
+              >
+                Full Name
+              </label>
               <input
                 type="text"
                 id="name"
                 name="name"
                 value={profileData.name}
                 onChange={handleProfileChange}
+                className="w-full bg-primary border border-border-color rounded-md px-3 py-2 focus:ring-2 focus:ring-accent focus:outline-none"
               />
             </div>
-            <div className="input-group">
-              <label htmlFor="email">Email Address</label>
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-text-primary mb-1"
+              >
+                Email Address
+              </label>
               <input
                 type="email"
                 id="email"
                 name="email"
                 value={profileData.email}
                 onChange={handleProfileChange}
+                className="w-full bg-primary border border-border-color rounded-md px-3 py-2 focus:ring-2 focus:ring-accent focus:outline-none"
               />
             </div>
           </div>
-          <div className="profile-card-footer">
-            <p>Please make sure your details are correct.</p>
-            <button type="submit" className="auth-btn">
+          <div className="bg-primary px-6 py-4 flex justify-end">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-accent text-white font-semibold text-sm rounded-md hover:bg-opacity-90 transition"
+            >
               Save Changes
             </button>
           </div>
         </form>
-      </div>
+      </FormCard>
 
       {/* Change Password Card */}
-      <div className="profile-card">
-        <div className="profile-card-header">
-          <h3>Change Password</h3>
-          <p>
-            Ensure your account is using a long, random password to stay secure.
-          </p>
-        </div>
-        <form onSubmit={onPasswordSubmit} className="profile-card-body">
-          <div className="input-group">
-            <label htmlFor="currentPassword">Current Password</label>
-            <input
-              type="password"
-              id="currentPassword"
-              name="currentPassword"
-              value={passwordData.currentPassword}
-              onChange={handlePasswordChange}
-              required
-            />
-          </div>
-          <div className="form-row">
-            <div className="input-group">
-              <label htmlFor="newPassword">New Password</label>
+      <FormCard
+        title="Change Password"
+        description="Ensure your account is using a long, random password to stay secure."
+      >
+        <form onSubmit={onPasswordSubmit}>
+          <div className="p-6 space-y-6">
+            <div>
+              <label
+                htmlFor="currentPassword"
+                className="block text-sm font-medium text-text-primary mb-1"
+              >
+                Current Password
+              </label>
               <input
                 type="password"
-                id="newPassword"
-                name="newPassword"
-                value={passwordData.newPassword}
+                id="currentPassword"
+                name="currentPassword"
+                value={passwordData.currentPassword}
                 onChange={handlePasswordChange}
                 required
-                minLength="6"
+                className="w-full bg-primary border border-border-color rounded-md px-3 py-2 focus:ring-2 focus:ring-accent focus:outline-none"
               />
             </div>
-            <div className="input-group">
-              <label htmlFor="confirmNewPassword">Confirm New Password</label>
-              <input
-                type="password"
-                id="confirmNewPassword"
-                name="confirmNewPassword"
-                value={passwordData.confirmNewPassword}
-                onChange={handlePasswordChange}
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label
+                  htmlFor="newPassword"
+                  className="block text-sm font-medium text-text-primary mb-1"
+                >
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  required
+                  minLength="6"
+                  className="w-full bg-primary border border-border-color rounded-md px-3 py-2 focus:ring-2 focus:ring-accent focus:outline-none"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="confirmNewPassword"
+                  className="block text-sm font-medium text-text-primary mb-1"
+                >
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  id="confirmNewPassword"
+                  name="confirmNewPassword"
+                  value={passwordData.confirmNewPassword}
+                  onChange={handlePasswordChange}
+                  required
+                  className="w-full bg-primary border border-border-color rounded-md px-3 py-2 focus:ring-2 focus:ring-accent focus:outline-none"
+                />
+              </div>
             </div>
           </div>
-          <div className="profile-card-footer">
-            <p>Minimum 6 characters required.</p>
-            <button type="submit" className="auth-btn">
+          <div className="bg-primary px-6 py-4 flex justify-end">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-accent text-white font-semibold text-sm rounded-md hover:bg-opacity-90 transition"
+            >
               Update Password
             </button>
           </div>
         </form>
-      </div>
+      </FormCard>
     </div>
   );
 };

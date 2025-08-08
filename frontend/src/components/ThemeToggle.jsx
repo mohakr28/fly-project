@@ -4,11 +4,12 @@ import { FaSun, FaMoon } from "react-icons/fa";
 export const ThemeToggle = ({ theme, toggleTheme }) => {
   return (
     <button
-      className="theme-toggle-btn"
+      // ✅ تم استبدال الكلاس القديم بكلاسات Tailwind لتصميم الزر
+      className="p-2 rounded-full text-text-secondary hover:bg-tertiary hover:text-text-primary transition-colors duration-200"
       onClick={toggleTheme}
       title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
-      {theme === "light" ? <FaMoon /> : <FaSun />}
+      {theme === "light" ? <FaMoon size={18} /> : <FaSun size={18} />}
     </button>
   );
 };

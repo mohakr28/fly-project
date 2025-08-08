@@ -1,12 +1,18 @@
+// frontend/src/components/DashboardStats.jsx
 import React from "react";
 import { FaPlane, FaClock, FaTimesCircle } from "react-icons/fa";
 
-const StatCard = ({ icon, value, label, type }) => (
-  <div className={`stat-card ${type}`}>
-    <div className="stat-icon">{icon}</div>
-    <div className="stat-info">
-      <div className="stat-value">{value}</div>
-      <div className="stat-label">{label}</div>
+// مكون فرعي لبطاقة الإحصائيات لتقليل التكرار
+const StatCard = ({ icon, value, label, colorClass }) => (
+  <div className="flex items-center p-4 bg-secondary rounded-lg shadow-sm">
+    <div
+      className={`flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${colorClass}`}
+    >
+      {icon}
+    </div>
+    <div className="ml-4">
+      <p className="text-2xl font-bold text-text-primary">{value}</p>
+      <p className="text-sm font-medium text-text-secondary">{label}</p>
     </div>
   </div>
 );
@@ -16,24 +22,30 @@ const DashboardStats = ({ flights }) => {
   const cancelledCount = flights.filter((f) => f.status === "Cancelled").length;
 
   return (
-    <div className="stats-container">
+    <div className="grid gap-6 md:grid-cols-3">
       <StatCard
-        icon={<FaPlane />}
+        icon={
+          <FaPlane className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
+        }
         value={flights.length}
         label="Total Flights Tracked"
-        type="total"
+        colorClass="bg-indigo-100 dark:bg-indigo-500/20"
       />
       <StatCard
-        icon={<FaClock />}
+        icon={
+          <FaClock className="h-6 w-6 text-yellow-600 dark:text-yellow-300" />
+        }
         value={delayedCount}
         label="Delayed Flights"
-        type="delayed"
+        colorClass="bg-yellow-100 dark:bg-yellow-500/20"
       />
       <StatCard
-        icon={<FaTimesCircle />}
+        icon={
+          <FaTimesCircle className="h-6 w-6 text-red-600 dark:text-red-300" />
+        }
         value={cancelledCount}
         label="Cancelled Flights"
-        type="cancelled"
+        colorClass="bg-red-100 dark:bg-red-500/20"
       />
     </div>
   );

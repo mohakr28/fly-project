@@ -6,53 +6,64 @@ import Sidebar from "./Sidebar";
 const ProtectedRoute = () => {
   const token = localStorage.getItem("token");
 
-  // --- إدارة حالة الشريط الجانبي ---
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(
-    window.innerWidth < 992
+    window.innerWidth < 768
   );
-  const toggleSidebar = () => {
-    setSidebarCollapsed((prev) => !prev);
-  };
+  const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
 
-  // --- إدارة حالة السمة (Theme) ---
   const [theme, setTheme] = useState(
     () => localStorage.getItem("theme") || "light"
   );
+
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
+    const root = window.document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
     localStorage.setItem("theme", theme);
   }, [theme]);
+
   const toggleTheme = () => {
     setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
   };
 
-  // تأثير لمراقبة تغيير حجم الشاشة
+  // ... (بقية الكود بدون تغيير)
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(min-width: 992px)");
-    const handleResize = (e) => {
-      setSidebarCollapsed(!e.matches);
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarCollapsed(true);
+      }
     };
-    mediaQuery.addEventListener("change", handleResize);
-    return () => mediaQuery.removeEventListener("change", handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  // تمرير جميع الحالات والدوال اللازمة عبر context
   const contextValue = { toggleSidebar, theme, toggleTheme };
 
   return (
-    <div
-      className={`app-layout ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}
-    >
+    // ✅ لا حاجة لكلاسات الألوان هنا، لأنها مطبقة على body في index.css
+    <div className="relative min-h-screen">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={toggleSidebar} />
-      <main className="main-content">
+
+      <main
+        className={`p-6 transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
+        }`}
+      >
         <Outlet context={contextValue} />
       </main>
-      {!isSidebarCollapsed && (
-        <div className="overlay" onClick={toggleSidebar}></div>
+
+      {!isSidebarCollapsed && window.innerWidth < 768 && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={toggleSidebar}
+        ></div>
       )}
     </div>
   );

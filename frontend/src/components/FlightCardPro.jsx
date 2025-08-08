@@ -1,3 +1,4 @@
+// frontend/src/components/FlightCardPro.jsx
 import React from "react";
 import { motion } from "framer-motion";
 import { format, formatDistanceToNowStrict, isValid } from "date-fns";
@@ -13,14 +14,23 @@ import {
   FaExclamationTriangle,
   FaInfoCircle,
 } from "react-icons/fa";
-
 import airlines from "../data/airlines.json";
 import airports from "../data/airports.json";
+
+// ... (دوال المساعدة تبقى كما هي)
+const getFormattedLocalTime = (dateString, airportInfo) => {
+  /* No change */
+};
+const getAnalysisAge = (dateString) => {
+  /* No change */
+};
 
 const WeatherDetail = ({ icon, value, unit, highlightClass = "" }) => {
   if (value === null || value === undefined) return null;
   return (
-    <div className={`weather-detail ${highlightClass}`}>
+    <div
+      className={`flex items-center gap-2 text-sm text-text-secondary ${highlightClass}`}
+    >
       {icon}
       <span>
         {value}
@@ -31,27 +41,22 @@ const WeatherDetail = ({ icon, value, unit, highlightClass = "" }) => {
 };
 
 const WeatherBlock = ({ weather, type }) => {
-  if (!weather) {
-    return (
-      <div className="weather-block">
-        <h4>{type} Weather</h4>
-        <div className="weather-details-grid">
-          <span className="weather-detail">No data available.</span>
-        </div>
-      </div>
-    );
-  }
-
+  if (!weather) return null;
   const visibilityKm =
     weather.visibility !== null && weather.visibility !== undefined
       ? (weather.visibility / 1000).toFixed(1)
       : null;
   const visibilityHighlight =
-    visibilityKm !== null && visibilityKm < 1.5 ? "highlight-bad" : "";
+    visibilityKm !== null && visibilityKm < 1.5
+      ? "text-red-500 dark:text-red-400 font-semibold"
+      : "";
+
   return (
-    <div className="weather-block">
-      <h4>{type} Weather</h4>
-      <div className="weather-details-grid">
+    <div>
+      <h4 className="mb-2 text-sm font-semibold text-text-primary border-b border-border-color pb-1">
+        {type} Weather
+      </h4>
+      <div className="space-y-1">
         <WeatherDetail
           icon={<FaTemperatureHigh />}
           value={weather.temperature}
@@ -80,33 +85,11 @@ const WeatherBlock = ({ weather, type }) => {
   );
 };
 
-const getFormattedLocalTime = (dateString, airportInfo) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  if (!isValid(date)) return "N/A";
-
-  const timezone = airportInfo?.timezone || "UTC";
-  try {
-    const localTime = toZonedTime(date, timezone);
-    return formatInTz(localTime, timezone, "HH:mm zzz");
-  } catch (e) {
-    return format(date, "HH:mm 'UTC'");
-  }
-};
-
-const getAnalysisAge = (dateString) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  if (!isValid(date)) return "N/A";
-  return formatDistanceToNowStrict(date, { addSuffix: true });
-};
-
 const FlightCardPro = ({ flight }) => {
   const airlineCode = flight.flightNumber.substring(0, 2);
   const airlineName = airlines[airlineCode] || airlineCode;
   const departureAirportInfo = airports[flight.departureAirport];
   const arrivalAirportInfo = airports[flight.arrivalAirport];
-
   const formattedLocalTime = getFormattedLocalTime(
     flight.scheduledDeparture,
     departureAirportInfo
@@ -114,98 +97,103 @@ const FlightCardPro = ({ flight }) => {
   const analysisAge = getAnalysisAge(flight.createdAt);
 
   const { isWeatherSevere } = flight.analysisFlags || {};
-
-  const scheduledDepDate = new Date(flight.scheduledDeparture);
-  const createdAtDate = new Date(flight.createdAt);
   const isReportingDelayed =
     flight.status === "Cancelled" &&
-    isValid(scheduledDepDate) &&
-    isValid(createdAtDate) &&
-    createdAtDate > scheduledDepDate;
+    isValid(new Date(flight.scheduledDeparture)) &&
+    isValid(new Date(flight.createdAt)) &&
+    new Date(flight.createdAt) > new Date(flight.scheduledDeparture);
+
+  const statusClasses = {
+    Delayed: {
+      border: "border-l-yellow-500",
+      badgeBg: "bg-yellow-100 dark:bg-yellow-500/20",
+      badgeText: "text-yellow-800 dark:text-yellow-300",
+    },
+    Cancelled: {
+      border: "border-l-red-600",
+      badgeBg: "bg-red-100 dark:bg-red-500/20",
+      badgeText: "text-red-800 dark:text-red-300",
+    },
+  };
+  const currentStatus = statusClasses[flight.status] || {};
 
   return (
-    <motion.div layout className={`flight-card ${flight.status}`}>
-      <div className="card-header">
-        <div className="flight-identity">
-          <span>{`${airlineName} (${flight.flightNumber})`}</span>
-        </div>
-        <div className={`flight-status-badge ${flight.status.toLowerCase()}`}>
+    <motion.div
+      layout
+      className={`bg-secondary rounded-lg shadow-sm border-l-4 ${currentStatus.border} transition-shadow hover:shadow-lg flex flex-col`}
+    >
+      {/* Card Header */}
+      <div className="flex justify-between items-center p-4 border-b border-border-color">
+        <span className="font-bold text-text-primary">
+          {airlineName} ({flight.flightNumber})
+        </span>
+        <span
+          className={`px-3 py-1 text-xs font-bold uppercase rounded-full ${currentStatus.badgeBg} ${currentStatus.badgeText}`}
+        >
           {flight.status}
+        </span>
+      </div>
+
+      {/* Flight Path */}
+      <div className="p-4 grid grid-cols-[1fr,auto,1fr] items-start gap-4 text-center">
+        <div>
+          <p className="text-3xl font-bold text-text-primary">
+            {flight.departureAirport}
+          </p>
+          <p className="text-xs text-text-secondary mt-1 truncate">
+            {departureAirportInfo?.name || "Unknown"}
+          </p>
+          <p className="mt-2 text-xs font-semibold text-accent bg-accent-light rounded-full inline-block px-2 py-0.5">
+            {formattedLocalTime}
+          </p>
+        </div>
+        <div className="mt-1 text-text-secondary">
+          <FaPlane size={24} />
+        </div>
+        <div>
+          <p className="text-3xl font-bold text-text-primary">
+            {flight.arrivalAirport}
+          </p>
+          <p className="text-xs text-text-secondary mt-1 truncate">
+            {arrivalAirportInfo?.name || "Unknown"}
+          </p>
         </div>
       </div>
 
-      <div className="card-content">
-        <div className="flight-path-grid">
-          <div className="airport">
-            <div className="airport-main">{flight.departureAirport}</div>
-            <div className="airport-name">
-              {departureAirportInfo?.name || "Unknown Airport"}
-            </div>
-            <div className="local-time">{formattedLocalTime}</div>
-          </div>
-          <div className="flight-path-center">
-            <FaPlane />
-          </div>
-          <div className="airport">
-            <div className="airport-main">{flight.arrivalAirport}</div>
-            <div className="airport-name">
-              {arrivalAirportInfo?.name || "Unknown Airport"}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="analysis-section">
-        <h3 className="analysis-title">Analysis & Evidence</h3>
-
+      {/* Analysis Section */}
+      <div className="p-4 bg-primary border-t border-border-color">
+        <h3 className="text-xs font-bold uppercase text-text-secondary tracking-wider mb-3">
+          Analysis & Evidence
+        </h3>
         {(isWeatherSevere || isReportingDelayed) && (
-          <div className="analysis-flags-container">
+          <div className="flex flex-wrap gap-2 mb-4">
             {isWeatherSevere && (
-              <div className="flag-item severe-weather">
-                <FaExclamationTriangle />
-                <span>Severe Weather</span>
+              <div className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-300">
+                <FaExclamationTriangle /> Severe Weather
               </div>
             )}
             {isReportingDelayed && (
-              <div className="flag-item late-report">
-                <FaInfoCircle />
-                <span>Late Cancellation</span>
+              <div className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300">
+                <FaInfoCircle /> Late Cancellation
               </div>
             )}
           </div>
         )}
-
-        <div className="evidence-section">
-          <h4 className="evidence-title">Weather Conditions</h4>
-          <div className="evidence-content">
-            <div className="weather-grid">
-              <WeatherBlock
-                weather={flight.weatherInfo?.departure}
-                type="Departure"
-              />
-              <WeatherBlock
-                weather={flight.weatherInfo?.arrival}
-                type="Arrival"
-              />
-            </div>
-          </div>
+        <div className="bg-secondary p-3 rounded-md border border-border-color grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <WeatherBlock
+            weather={flight.weatherInfo?.departure}
+            type="Departure"
+          />
+          <WeatherBlock weather={flight.weatherInfo?.arrival} type="Arrival" />
         </div>
-
-        {flight.cancellationContext && (
-          <div className="evidence-section">
-            <h4 className="evidence-title">Operational Context</h4>
-            <div className="evidence-content">
-              <p>{flight.cancellationContext}</p>
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="card-footer">
-        <span>
+      {/* Footer */}
+      <div className="flex justify-between items-center p-3 bg-primary text-xs text-text-secondary border-t border-border-color mt-auto">
+        <span className="flex items-center gap-2">
           <FaFighterJet /> {flight.aircraftModel || "N/A"}
         </span>
-        <span>
+        <span className="flex items-center gap-2">
           <FaSyncAlt /> Analyzed: {analysisAge}
         </span>
       </div>

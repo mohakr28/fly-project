@@ -1,0 +1,135 @@
+/* frontend/src/index.css */
+
+@import "tailwindcss";
+
+/* تعريف الألوان الأساسية للوضع الفاتح */
+@theme {
+  /* الألوان الأساسية */
+  --color-primary: #f8fafc; /* slate-50 - خلفية أكثر نعومة */
+  --color-secondary: #ffffff; /* white */
+  --color-tertiary: #f1f5f9; /* slate-100 - تدرج أفضل */
+
+  /* ألوان النصوص */
+  --color-text-primary: #0f172a; /* slate-900 - أكثر وضوحاً */
+  --color-text-secondary: #64748b; /* slate-500 - توازن أفضل */
+  --color-text-muted: #94a3b8; /* slate-400 - للنصوص الثانوية */
+
+  /* ألوان الحدود */
+  --color-border-color: #e2e8f0; /* slate-200 */
+  --color-border-light: #f1f5f9; /* slate-100 - للحدود الخفيفة */
+
+  /* ألوان التمييز */
+  --color-accent: #4f46e5; /* indigo-600 */
+  --color-accent-light: #e0e7ff; /* indigo-100 */
+  --color-accent-dark: #3730a3; /* indigo-700 - للحالات المتقدمة */
+
+  /* ألوان الحالات */
+  --color-success: #10b981; /* emerald-500 */
+  --color-success-light: #d1fae5; /* emerald-100 */
+  --color-warning: #f59e0b; /* amber-500 */
+  --color-warning-light: #fef3c7; /* amber-100 */
+  --color-error: #ef4444; /* red-500 */
+  --color-error-light: #fee2e2; /* red-100 */
+
+  /* ألوان إضافية للتفاعل */
+  --color-hover: #f8fafc; /* slate-50 */
+  --color-active: #e2e8f0; /* slate-200 */
+}
+
+/* التحكم اليدوي بالوضع المظلم عبر كلاس .dark */
+.dark {
+  /* الألوان الأساسية للوضع المظلم */
+  --color-primary: #0f172a; /* slate-900 */
+  --color-secondary: #1e293b; /* slate-800 */
+  --color-tertiary: #334155; /* slate-700 */
+
+  /* ألوان النصوص للوضع المظلم */
+  --color-text-primary: #f8fafc; /* slate-50 */
+  --color-text-secondary: #cbd5e1; /* slate-300 */
+  --color-text-muted: #94a3b8; /* slate-400 */
+
+  /* ألوان الحدود للوضع المظلم */
+  --color-border-color: #475569; /* slate-600 */
+  --color-border-light: #334155; /* slate-700 */
+
+  /* ألوان التمييز للوضع المظلم */
+  --color-accent: #6366f1; /* indigo-500 - أكثر إشراقاً للوضع المظلم */
+  --color-accent-light: rgba(99, 102, 241, 0.2); /* شفافية محسنة */
+  --color-accent-dark: #4338ca; /* indigo-600 */
+
+  /* ألوان الحالات للوضع المظلم */
+  --color-success: #34d399; /* emerald-400 */
+  --color-success-light: rgba(52, 211, 153, 0.2);
+  --color-warning: #fbbf24; /* amber-400 */
+  --color-warning-light: rgba(251, 191, 36, 0.2);
+  --color-error: #f87171; /* red-400 */
+  --color-error-light: rgba(248, 113, 113, 0.2);
+
+  /* ألوان إضافية للتفاعل في الوضع المظلم */
+  --color-hover: #1e293b; /* slate-800 */
+  --color-active: #334155; /* slate-700 */
+}
+
+/* فئات مساعدة للألوان (تم تعديل الأسماء لتطابق الكود الحالي) */
+.bg-primary {
+  background-color: var(--color-primary);
+}
+.bg-secondary {
+  background-color: var(--color-secondary);
+}
+.bg-tertiary {
+  background-color: var(--color-tertiary);
+}
+
+.text-text-primary {
+  color: var(--color-text-primary);
+}
+.text-text-secondary {
+  color: var(--color-text-secondary);
+}
+.text-text-muted {
+  color: var(--color-text-muted);
+}
+
+.border-border-color {
+  border-color: var(--color-border-color);
+}
+.border-border-light {
+  border-color: var(--color-border-light);
+}
+
+.bg-accent {
+  background-color: var(--color-accent);
+}
+.bg-accent-light {
+  background-color: var(--color-accent-light);
+}
+.text-accent {
+  color: var(--color-accent);
+}
+
+/* تأثيرات التفاعل */
+.hover-bg:hover {
+  background-color: var(--color-hover);
+}
+.active-bg:active {
+  background-color: var(--color-active);
+}
+
+/* انتقالات سلسة */
+.transition-colors {
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* تحسينات إضافية للقراءة */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-effect {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}

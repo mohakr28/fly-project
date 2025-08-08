@@ -6,32 +6,23 @@ import { useDebounce } from "./useDebounce";
 import DashboardStats from "./DashboardStats";
 import FlightGrid from "./FlightGrid";
 import { ControlPanel } from "./ControlPanel";
-import Header from "./Header"; // <-- استيراد الهيدر الجديد
+import Header from "./Header";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const FlightDashboard = () => {
-  // الحصول على كل شيء من السياق
   const { toggleSidebar, theme, toggleTheme } = useOutletContext();
-
-  // Data & Filter State
   const [allFlights, setAllFlights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDate, setFilterDate] = useState("");
-
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Data Fetching Logic with Auth Header
   const fetchFlights = useCallback(async () => {
     setLoading(true);
     const token = localStorage.getItem("token");
-    const config = {
-      headers: {
-        "x-auth-token": token,
-      },
-    };
+    const config = { headers: { "x-auth-token": token } };
 
     try {
       const response = await axios.get(`${API_URL}/api/flights`, config);
@@ -54,7 +45,6 @@ const FlightDashboard = () => {
     fetchFlights();
   }, [fetchFlights]);
 
-  // Client-Side Filtering Logic
   const filteredFlights = useMemo(() => {
     return allFlights.filter((flight) => {
       const statusMatch =
@@ -74,14 +64,14 @@ const FlightDashboard = () => {
   }, [allFlights, activeStatus, debouncedSearchQuery, filterDate]);
 
   return (
-    <div className="dashboard-container">
+    // استخدام Flexbox و gap لتنسيق المسافات بين المكونات
+    <div className="flex flex-col gap-6">
       <Header
         title="Flight Operations Monitor"
         toggleSidebar={toggleSidebar}
         theme={theme}
         toggleTheme={toggleTheme}
       />
-
       <DashboardStats flights={allFlights} />
       <ControlPanel
         activeStatus={activeStatus}
