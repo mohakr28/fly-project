@@ -1,6 +1,18 @@
 // backend/models/LegalDocument.js
 const mongoose = require("mongoose");
 
+// بنية المادة القانونية
+const ArticleSchema = new mongoose.Schema({
+    articleNumber: { type: String, required: true },
+    title: { type: String, required: true },
+    text: { type: String, required: true },
+    tags: { type: [String], index: true },
+    // الحقل الجديد لربط المادة بـ Pinecone
+    // index: true هنا كافٍ لإنشاء الفهرس
+    pineconeId: { type: String, index: true, unique: true, sparse: true },
+}, { _id: false });
+
+
 const LegalDocumentSchema = new mongoose.Schema(
   {
     celexId: {
@@ -22,18 +34,17 @@ const LegalDocumentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // ✅ --- الحقل الجديد ---
     fullText: {
       type: String,
     },
-    // ----------------------
     publicationDate: {
       type: Date,
       required: true,
     },
     keywords: [String],
+    
+    articles: [ArticleSchema],
 
-    // الحقول الجديدة للتحقق الآلي
     lastVerifiedAt: {
       type: Date,
     },
@@ -45,7 +56,7 @@ const LegalDocumentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// فهرس للبحث النصي
+// فهرس البحث النصي
 LegalDocumentSchema.index({
   title: "text",
   summary: "text",

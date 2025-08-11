@@ -3,9 +3,7 @@ const express = require("express");
 const router = express.Router();
 const auth = require("../../middleware/auth");
 const LegalDocument = require("../../models/LegalDocument");
-// ✅ ==== السطر المفقود الذي يجب إضافته ====
-const { runVerificationJob } = require("../../services/legalService");
-// ===========================================
+const { getPineconeIndex, getOpenAI } = require("../../config/pinecone");
 
 // --- GET Endpoints (Read) ---
 
@@ -22,7 +20,6 @@ router.get("/documents", auth, async (req, res) => {
   }
 });
 
-// ✅ --- GET Endpoint (Read Single) ---
 // @route   GET /api/legal/documents/:id
 // @desc    Get a single legal document by its ID
 // @access  Private
@@ -35,7 +32,6 @@ router.get("/documents/:id", auth, async (req, res) => {
     res.json(doc);
   } catch (err) {
     console.error(err.message);
-    // Handle cases where the ID format is invalid
     if (err.kind === "ObjectId") {
       return res.status(404).json({ msg: "Document not found" });
     }
@@ -68,7 +64,7 @@ router.post("/documents", auth, async (req, res) => {
     summary,
     publicationDate,
     keywords,
-    fullText, // ✅
+    fullText,
   } = req.body;
   try {
     let doc = await LegalDocument.findOne({ celexId });
@@ -84,7 +80,7 @@ router.post("/documents", auth, async (req, res) => {
       summary,
       publicationDate,
       keywords,
-      fullText, // ✅
+      fullText,
     });
     await doc.save();
     res.status(201).json(doc);
@@ -100,22 +96,18 @@ router.post("/documents", auth, async (req, res) => {
 // @desc    Update a legal document
 // @access  Private
 router.put("/documents/:id", auth, async (req, res) => {
-  const { title, summary, publicationDate, keywords, fullText } = req.body; // ✅
+  const { title, summary, publicationDate, keywords, fullText } = req.body;
   try {
     let doc = await LegalDocument.findById(req.params.id);
     if (!doc) {
       return res.status(404).json({ msg: "Document not found" });
     }
-    // Update fields
     if (title) doc.title = title;
     if (summary) doc.summary = summary;
     if (publicationDate) doc.publicationDate = publicationDate;
     if (keywords) doc.keywords = keywords;
-    if (fullText) doc.fullText = fullText; // ✅
-
-    // When a doc is manually updated, it's considered "reviewed"
+    if (fullText) doc.fullText = fullText;
     doc.needsReview = false;
-
     await doc.save();
     res.json(doc);
   } catch (err) {
@@ -125,7 +117,7 @@ router.put("/documents/:id", auth, async (req, res) => {
 });
 
 // @route   PUT /api/legal/mark-reviewed/:id
-// @desc    Mark a document as reviewed (set needsReview to false)
+// @desc    Mark a document as reviewed
 // @access  Private
 router.put("/mark-reviewed/:id", auth, async (req, res) => {
   try {
@@ -134,7 +126,7 @@ router.put("/mark-reviewed/:id", auth, async (req, res) => {
       return res.status(404).json({ msg: "Document not found" });
     }
     doc.needsReview = false;
-    doc.lastVerifiedAt = new Date(); // Also update verification date
+    doc.lastVerifiedAt = new Date();
     await doc.save();
     res.json(doc);
   } catch (err) {
@@ -161,37 +153,60 @@ router.delete("/documents/:id", auth, async (req, res) => {
   }
 });
 
-// --- Context Endpoint for AI (No Change) ---
-// @route   POST /api/legal/context
-// @desc    Get relevant legal context based on case keywords
+// --- نقطة نهاية البحث الدلالي ---
+// @route   POST /api/legal/semantic-search
+// @desc    Find relevant articles using semantic search
 // @access  Private
-router.post("/context", auth, async (req, res) => {
-  const { caseKeywords } = req.body;
-  if (
-    !caseKeywords ||
-    !Array.isArray(caseKeywords) ||
-    caseKeywords.length === 0
-  ) {
-    return res
-      .status(400)
-      .json({ msg: "Please provide an array of caseKeywords." });
-  }
-  try {
-    const searchString = caseKeywords.join(" ");
-    const relevantJudgments = await LegalDocument.find({
-      $text: { $search: searchString },
-      documentType: "cjeu_judgment",
-    }).limit(5);
+router.post("/semantic-search", auth, async (req, res) => {
+    const { caseDescription, topK = 3 } = req.body;
 
-    const mainRegulation = await LegalDocument.findOne({
-      documentType: "regulation",
-    });
+    if (!caseDescription) {
+        return res.status(400).json({ msg: "A 'caseDescription' string is required." });
+    }
 
-    res.json({ mainRegulation, relevantJudgments });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
-  }
+    try {
+        const openai = getOpenAI();
+        const pineconeIndex = getPineconeIndex();
+
+        const embeddingResponse = await openai.embeddings.create({
+            model: "text-embedding-3-small",
+            input: caseDescription,
+        });
+        
+        if (!embeddingResponse?.data?.[0]?.embedding) {
+            console.error("Invalid response from OpenAI during search.");
+            return res.status(500).json({ msg: "Failed to generate embedding for search query." });
+        }
+
+        const queryVector = embeddingResponse.data[0].embedding;
+
+        const queryResult = await pineconeIndex.query({
+            vector: queryVector,
+            topK: parseInt(topK, 10),
+            includeMetadata: false,
+        });
+        
+        const matches = queryResult.matches;
+        if (!matches || matches.length === 0) {
+            return res.json([]);
+        }
+
+        const pineconeIds = matches.map(match => match.id);
+        const regulation = await LegalDocument.findOne({ "articles.pineconeId": { $in: pineconeIds } });
+
+        if (!regulation) {
+            return res.status(404).json({ msg: "Could not find a regulation containing the matched articles." });
+        }
+        
+        const articlesMap = new Map(regulation.articles.map(a => [a.pineconeId, a]));
+        const sortedArticles = pineconeIds.map(id => articlesMap.get(id)).filter(Boolean);
+
+        res.json(sortedArticles);
+
+    } catch (err) {
+        console.error("Semantic search error:", err.response ? err.response.data : err.message);
+        res.status(500).send("Server Error during semantic search.");
+    }
 });
 
 module.exports = router;
