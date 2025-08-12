@@ -7,7 +7,8 @@ const connectDB = require("./config/db");
 const bcrypt = require("bcryptjs");
 const User = require("./models/User");
 const LegalDocument = require("./models/LegalDocument");
-const { initVectorServices } = require("./config/pinecone"); // ✅ استيراد
+const Event = require("./models/Event");
+const { initVectorServices } = require("./config/pinecone");
 
 const { fetchAndProcessFlights } = require("./services/aeroDataBoxService");
 const { fetchAndStoreEvents } = require("./services/eventService");
@@ -18,12 +19,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// --- Simple Request Logger Middleware ---
+app.use((req, res, next) => {
+  console.log(`[Request] ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // API Routes
 app.use("/api/flights", require("./routes/api/flights"));
 app.use("/api/events", require("./routes/api/events"));
 app.use("/api/auth", require("./routes/api/auth"));
 app.use("/api/users", require("./routes/api/users"));
 app.use("/api/legal", require("./routes/api/legal"));
+app.use("/api/airports", require("./routes/api/airports")); // ✅ إضافة المسار الجديد
 
 const createDefaultAdmin = async () => {
   try {
@@ -31,7 +39,7 @@ const createDefaultAdmin = async () => {
     let adminUser = await User.findOne({ email: adminEmail });
 
     if (!adminUser) {
-      console.log("Default admin user not found. Creating one...");
+      console.log("LOG: Default admin user not found. Creating one...");
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash("admin", salt);
       adminUser = new User({
@@ -41,8 +49,10 @@ const createDefaultAdmin = async () => {
       });
       await adminUser.save();
       console.log(
-        "Default admin user created with password 'admin'. Please change it immediately."
+        "LOG: Default admin user created with password 'admin'. Please change it immediately."
       );
+    } else {
+      console.log("LOG: Default admin user already exists.");
     }
   } catch (error) {
     console.error("Error creating default admin user:", error);
@@ -55,7 +65,6 @@ const seedInitialRegulation = async () => {
     const celexId = "32004R0261";
     let regulation = await LegalDocument.findOne({ celexId });
 
-    // ✅ بيانات المواد المهيكلة مع نصوصها الكاملة وتصنيفاتها
     const articlesData = [
         { articleNumber: "Article 1", title: "Subject", text: "1. This Regulation establishes, under the conditions specified herein, minimum rights for passengers when:\n(a) they are denied boarding against their will;\n(b) their flight is cancelled;\n(c) their flight is delayed.\n2. Application of this Regulation to Gibraltar airport is understood to be without prejudice to the respective legal positions of the Kingdom of Spain and the United Kingdom with regard to the dispute over sovereignty over the territory in which the airport is situated.\n3. Application of this Regulation to Gibraltar airport shall be suspended until the arrangements in the Joint Declaration made by the Foreign Ministers of the Kingdom of Spain and the United Kingdom on 2 December 1987 enter into operation. The Governments of Spain and the United Kingdom will inform the Council of such date of entry into operation.", tags: ["scope", "overview"] },
         { articleNumber: "Article 2", title: "Definitions", text: "For the purposes of this Regulation:\n(a) 'air carrier' means an air transport undertaking with a valid operating licence;\n(b) 'operating air carrier' means an air carrier that performs or intends to perform a flight under a contract with a passenger or on behalf of another person, legal or natural, having a contract with that passenger;\n(c) 'Community carrier' means an air carrier with a valid operating licence granted by a Member State in accordance with the provisions of Council Regulation (EEC) No 2407/92 of 23 July 1992 on licensing of air carriers(5);\n(d) 'tour operator' means, with the exception of an air carrier, an organiser within the meaning of Article 2, point 2, of Council Directive 90/314/EEC of 13 June 1990 on package travel, package holidays and package tours(6);\n(e) 'package' means those services defined in Article 2, point 1, of Directive 90/314/EEC;\n(f) 'ticket' means a valid document giving entitlement to transport, or something equivalent in paperless form, including electronic form, issued or authorised by the air carrier or its authorised agent;\n(g) 'reservation' means the fact that the passenger has a ticket, or other proof, which indicates that the reservation has been accepted and registered by the air carrier or tour operator;\n(h) 'final destination' means the destination on the ticket presented at the check-in counter or, in the case of directly connecting flights, the destination of the last flight; alternative connecting flights available shall not be taken into account if the original planned arrival time is respected;\n(i) 'person with reduced mobility' means any person whose mobility is reduced when using transport because of any physical disability (sensory or locomotory, permanent or temporary), intellectual impairment, age or any other cause of disability, and whose situation needs special attention and adaptation to the person's needs of the services made available to all passengers;\n(j) 'denied boarding' means a refusal to carry passengers on a flight, although they have presented themselves for boarding under the conditions laid down in Article 3(2), except where there are reasonable grounds to deny them boarding, such as reasons of health, safety or security, or inadequate travel documentation;\n(k) 'volunteer' means a person who has presented himself for boarding under the conditions laid down in Article 3(2) and responds positively to the air carrier's call for passengers prepared to surrender their reservation in exchange for benefits.\n(l) 'cancellation' means the non-operation of a flight which was previously planned and on which at least one place was reserved.", tags: ["definitions"] },
@@ -74,9 +83,8 @@ const seedInitialRegulation = async () => {
         { articleNumber: "Article 15", title: "Exclusion of waiver", text: "1. Obligations vis-à-vis passengers pursuant to this Regulation may not be limited or waived, notably by a derogation or restrictive clause in the contract of carriage.\n2. If, nevertheless, such a derogation or restrictive clause is applied in respect of a passenger, or if the passenger is not correctly informed of his rights and for that reason has accepted compensation which is inferior to that provided for in this Regulation, the passenger shall still be entitled to take the necessary proceedings before the competent courts or bodies in order to obtain additional compensation.", tags: ["waiver", "contract", "passenger_rights"] },
     ];
 
-
     if (!regulation) {
-      console.log(`Seeding initial regulation: ${celexId}...`);
+      console.log(`LOG: Seeding initial regulation: ${celexId}...`);
       regulation = new LegalDocument({
         celexId: celexId,
         documentType: "regulation",
@@ -87,14 +95,15 @@ const seedInitialRegulation = async () => {
         articles: articlesData,
       });
       await regulation.save();
-      console.log("Initial regulation seeded successfully. IMPORTANT: You must now run the indexing script.");
+      console.log("LOG: Initial regulation seeded successfully. IMPORTANT: You must now run the indexing script.");
 
     } else {
-        if (!regulation.articles || regulation.articles.length < 5) { // Check if articles are missing
-            console.log("Regulation found, but articles are missing or incomplete. Seeding articles...");
+        console.log("LOG: Initial regulation already exists.");
+        if (!regulation.articles || regulation.articles.length < 5) {
+            console.log("LOG: Regulation found, but articles are missing or incomplete. Seeding articles...");
             regulation.articles = articlesData;
             await regulation.save();
-            console.log("Articles seeded successfully. IMPORTANT: You must now run the indexing script.");
+            console.log("LOG: Articles seeded successfully. IMPORTANT: You must now run the indexing script.");
         }
     }
   } catch (error) {
@@ -103,45 +112,52 @@ const seedInitialRegulation = async () => {
   }
 };
 
-const startApp = async () => {
+const startApp = async (appInstance) => {
   try {
+    console.log("LOG: Starting server initialization...");
     await connectDB();
-    await initVectorServices(); // ✅ تهيئة خدمات البحث أولاً
+    await initVectorServices();
     await createDefaultAdmin();
     await seedInitialRegulation();
 
-    // --- إعداد وبدء مراقب المستندات القانونية ---
-    const legalMonitor = new LegalDocumentMonitor({
-      checkInterval: 12 * 60 * 60 * 1000,
-    });
+    appInstance.locals.pendingEventsCount = await Event.countDocuments({ status: "pending_approval" });
+    console.log(`LOG: Initial pending events count: ${appInstance.locals.pendingEventsCount}`);
+    
+    console.log("LOG: Initializing Legal Document Monitor...");
+    const legalMonitor = new LegalDocumentMonitor();
 
     const initialDocs = await LegalDocument.find({});
     if (initialDocs.length > 0) {
+      console.log(`LOG: Found ${initialDocs.length} legal documents to monitor.`);
       initialDocs.forEach((doc) => {
         legalMonitor.addDocument(doc.celexId, doc.publicationDate);
       });
-      legalMonitor.start();
-    } else {
-      console.warn(
-        "WARNING: Legal documents collection is empty. Add documents via the UI to start monitoring."
-      );
     }
 
-    // --- المهام المجدولة الأخرى (Cron Jobs) ---
+    const runAllDataJobs = async () => {
+      console.log("LOG: [Master Job] Running all data fetching and monitoring jobs...");
+      await fetchAndProcessFlights();
+      await fetchAndStoreEvents(appInstance);
+      if (legalMonitor.documents.size > 0) {
+         await legalMonitor.checkForUpdates();
+      }
+      console.log("LOG: [Master Job] All jobs completed.");
+    };
+
+    console.log("LOG: Setting up cron jobs...");
+    console.log("LOG: [Initial Run] Performing initial run of all data jobs at startup...");
+    runAllDataJobs();
+
     cron.schedule("*/15 * * * *", () => {
-      console.log("Cron: Fetching flight data...");
-      fetchAndProcessFlights();
+      console.log("LOG: [Cron] Triggering all data jobs...");
+      runAllDataJobs();
     });
 
-    cron.schedule("0 2 * * *", () => {
-      console.log("Cron: Fetching event data...");
-      fetchAndStoreEvents();
-    });
-
+    console.log("LOG: Cron jobs scheduled successfully.");
 
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () =>
-      console.log(`Backend server running on port ${PORT}`)
+    appInstance.listen(PORT, () =>
+      console.log(`✅ Backend server running on port ${PORT}`)
     );
   } catch (error) {
     console.error("Failed to start the server:", error);
@@ -149,4 +165,4 @@ const startApp = async () => {
   }
 };
 
-startApp();
+startApp(app);

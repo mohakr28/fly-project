@@ -40,10 +40,17 @@ const getTAF = async (icaoCode) => {
 };
 
 const processWeatherData = (metarData) => {
-  if (!metarData || !metarData.rawOb) return null;
+  if (!metarData || !metarData.rawOb) {
+    console.log("LOG: [Weather Service] No raw METAR data to process.");
+    return null;
+  }
   const metarString = metarData.rawOb;
+  console.log(`LOG: [Weather Service] Processing METAR: "${metarString}"`);
   const parsedData = metarParser(metarString);
-  if (!parsedData) return null;
+  if (!parsedData) {
+    console.warn("LOG: [Weather Service] Failed to parse METAR string.");
+    return null;
+  }
 
   // --- ✅ الإصلاح النهائي هنا ---
   // 1. استخدام الحقل الصحيح `visib` بدلاً من `visib_sm`.
@@ -53,7 +60,7 @@ const processWeatherData = (metarData) => {
       ? Math.round(parseFloat(metarData.visib) * MILES_TO_METERS)
       : parsedData.visibility?.meters_float; // الخيار البديل
 
-  return {
+  const processed = {
     condition: metarString,
     temperature: parsedData.temperature?.celsius,
     windSpeed:
@@ -68,10 +75,13 @@ const processWeatherData = (metarData) => {
     // لا نحتاج لجلب الـ TAF حاليا لأنه لا يستخدم
     // taf: tafString,
   };
+  console.log("LOG: [Weather Service] Processed weather data:", processed);
+  return processed;
 };
 
 const getLatestWeather = async (icaoCode) => {
   if (!icaoCode) return null;
+  console.log(`LOG: [Weather Service] Fetching latest weather for ${icaoCode}...`);
   try {
     const response = await axios.get(
       "https://aviationweather.gov/api/data/metar",
@@ -85,10 +95,14 @@ const getLatestWeather = async (icaoCode) => {
       }
     );
     const metarData = response.data?.[0];
+    if (!metarData) {
+        console.log(`LOG: [Weather Service] No latest METAR data returned for ${icaoCode}.`);
+        return null;
+    }
     return processWeatherData(metarData);
   } catch (error) {
     console.error(
-      `Failed to fetch latest weather for ${icaoCode}:`,
+      `ERROR: [Weather Service] Failed to fetch latest weather for ${icaoCode}:`,
       error.message
     );
     return null;
@@ -98,7 +112,9 @@ const getLatestWeather = async (icaoCode) => {
 const getWeatherAtTime = async (icaoCode, targetTimeISO) => {
   if (!icaoCode || !targetTimeISO) return null;
   const targetTime = new Date(targetTimeISO);
-  if (targetTime > new Date()) return null;
+  if (targetTime > new Date()) return null; // Can't get future weather
+  
+  console.log(`LOG: [Weather Service] Fetching historical weather for ${icaoCode} at time ${targetTimeISO}...`);
 
   try {
     const response = await axios.get(
@@ -115,10 +131,14 @@ const getWeatherAtTime = async (icaoCode, targetTimeISO) => {
       }
     );
     const metarData = response.data?.[0];
+     if (!metarData) {
+        console.log(`LOG: [Weather Service] No historical METAR data returned for ${icaoCode} at specified time.`);
+        return null;
+    }
     return processWeatherData(metarData);
   } catch (error) {
     console.error(
-      `Failed to fetch historical weather for ${icaoCode}:`,
+      `ERROR: [Weather Service] Failed to fetch historical weather for ${icaoCode}:`,
       error.message
     );
     return null;

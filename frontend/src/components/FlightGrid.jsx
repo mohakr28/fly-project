@@ -34,8 +34,9 @@ const gridVariants = {
   },
 };
 
-const FlightGrid = ({ flights, loading }) => {
+const FlightGrid = ({ flights, loading, monitoredAirports }) => {
   const gridClasses = "grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6";
+  const monitoredIataSet = new Set(monitoredAirports.map(a => a.iata));
 
   if (loading) {
     return (
@@ -64,7 +65,7 @@ const FlightGrid = ({ flights, loading }) => {
       exit="hidden"
     >
       {flights.map((flight) => (
-        <FlightCardPro key={flight._id} flight={flight} />
+        <FlightCardPro key={flight._id} flight={flight} monitoredIataSet={monitoredIataSet} />
       ))}
     </motion.div>
   );

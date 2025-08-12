@@ -25,6 +25,7 @@ const getDocumentLastUpdate = async (celexId) => {
 
   try {
     const fullUrl = `${SPARQL_ENDPOINT}?query=${encodeURIComponent(query)}`;
+    console.log(`LOG: [Legal Monitor] Executing SPARQL query for ${celexId}`);
     const response = await axios.get(fullUrl, {
       headers: {
         Accept: "application/sparql-results+json",
@@ -36,14 +37,16 @@ const getDocumentLastUpdate = async (celexId) => {
     const bindings = response.data?.results?.bindings;
     if (bindings && bindings.length > 0) {
       const result = bindings[0];
+      console.log(`LOG: [Legal Monitor] Found update info for ${celexId}. Date: ${result.date?.value}`);
       return {
         mostRecentDate: result.date?.value,
       };
     }
     // If no results are found, return null
+    console.warn(`LOG: [Legal Monitor] No SPARQL results found for ${celexId}.`);
     return null;
   } catch (error) {
-    console.error(`Error fetching update info for ${celexId}:`, error.message);
+    console.error(`ERROR: [Legal Monitor] Error fetching update info for ${celexId}:`, error.message);
     return null;
   }
 };
@@ -56,7 +59,7 @@ class LegalDocumentMonitor {
       options.onUpdate ||
       (async (update) => {
         console.log(
-          `🔔 Default onUpdate: Update detected for ${update.celexId}. Marking for review.`
+          `🔔 LOG: [Legal Monitor] Default onUpdate: Update detected for ${update.celexId}. Marking for review.`
         );
         await LegalDocument.updateOne(
           { celexId: update.celexId },
@@ -77,7 +80,7 @@ class LegalDocumentMonitor {
   addDocument(celexId, currentDate) {
     if (!celexId || !currentDate) {
       console.warn(
-        "Monitor: Attempted to add a document with invalid celexId or currentDate."
+        "LOG: [Legal Monitor] Attempted to add a document with invalid celexId or currentDate."
       );
       return;
     }
@@ -85,33 +88,36 @@ class LegalDocumentMonitor {
       celexId,
       lastKnownDate: new Date(currentDate),
     });
-    console.log(`Monitor: Document ${celexId} added for monitoring.`);
+    console.log(`LOG: [Legal Monitor] Document ${celexId} added for monitoring.`);
   }
 
   async checkForUpdates() {
     if (this.documents.size === 0) {
+      console.log("LOG: [Legal Monitor] No documents to check for updates.");
       return;
     }
 
     console.log(
-      `Monitor: Checking ${this.documents.size} documents for updates...`
+      `LOG: [Legal Monitor] Checking ${this.documents.size} documents for updates...`
     );
     const updates = [];
 
     for (const [celexId, docInfo] of this.documents) {
       // Ignore invalid identifiers
       if (!celexId.startsWith("320")) {
-        console.log(`Monitor: Skipping invalid Celex ID format: ${celexId}`);
+        console.log(`LOG: [Legal Monitor] Skipping invalid Celex ID format: ${celexId}`);
         continue;
       }
 
       try {
+        console.log(`LOG: [Legal Monitor] Checking document: ${celexId}. Last known date: ${docInfo.lastKnownDate.toISOString()}`);
         const updateInfo = await getDocumentLastUpdate(celexId);
 
         if (updateInfo && updateInfo.mostRecentDate) {
           const liveDate = new Date(updateInfo.mostRecentDate);
 
           if (liveDate > docInfo.lastKnownDate) {
+            console.warn(`❗ LOG: [Legal Monitor] UPDATE FOUND for ${celexId}. Old: ${docInfo.lastKnownDate.toISOString()}, New: ${liveDate.toISOString()}`);
             const update = {
               celexId,
               oldDate: docInfo.lastKnownDate,
@@ -123,7 +129,7 @@ class LegalDocumentMonitor {
             // Trigger the onUpdate callback (which saves to DB)
             await this.onUpdate(update);
           } else {
-            console.log(`Monitor: ${celexId} is up-to-date.`);
+            console.log(`LOG: [Legal Monitor] Document ${celexId} is up-to-date.`);
             // Just update the verification date
             await LegalDocument.updateOne(
               { celexId: celexId },
@@ -132,26 +138,26 @@ class LegalDocumentMonitor {
           }
         } else {
           console.warn(
-            `Monitor: Could not retrieve update info for ${celexId}.`
+            `LOG: [Legal Monitor] Could not retrieve update info for ${celexId}.`
           );
         }
       } catch (error) {
-        console.error(`Monitor: Error checking ${celexId}:`, error);
+        console.error(`ERROR: [Legal Monitor] Error checking ${celexId}:`, error);
       }
       // Add a delay between requests to be polite to the server
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
 
-    console.log(`Monitor: Check complete. Found ${updates.length} updates.`);
+    console.log(`LOG: [Legal Monitor] Check complete. Found ${updates.length} updates.`);
     return updates;
   }
 
   start() {
     if (this.monitoringInterval) {
-      console.log("Monitor: Already running.");
+      console.log("LOG: [Legal Monitor] Monitor is already running.");
       return;
     }
-    console.log("Monitor: Performing initial check on startup...");
+    console.log("LOG: [Legal Monitor] Performing initial check on startup in 5 seconds...");
     // Wait a few seconds before the first check
     setTimeout(() => this.checkForUpdates(), 5000);
 
@@ -160,7 +166,7 @@ class LegalDocumentMonitor {
     }, this.checkInterval);
 
     console.log(
-      `Monitor: Started. Will check every ${
+      `LOG: [Legal Monitor] Started. Will check every ${
         this.checkInterval / 1000 / 60 / 60
       } hours.`
     );
@@ -170,7 +176,7 @@ class LegalDocumentMonitor {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
-      console.log("Monitor: Stopped.");
+      console.log("LOG: [Legal Monitor] Stopped.");
     }
   }
 }

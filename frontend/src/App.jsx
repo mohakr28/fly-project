@@ -6,7 +6,8 @@ import EventReviewDashboard from "./components/EventReviewDashboard";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
-import LegalManagement from "./pages/LegalManagement"; // ✅ استيراد الصفحة الجديدة
+import LegalManagement from "./pages/LegalManagement";
+import AirportManagement from "./pages/AirportManagement"; // ✅ استيراد الصفحة الجديدة
 
 function App() {
   return (
@@ -20,8 +21,8 @@ function App() {
           <Route path="/" element={<FlightDashboard />} />
           <Route path="/events" element={<EventReviewDashboard />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/legal" element={<LegalManagement />} />{" "}
-          {/* ✅ إضافة المسار الجديد */}
+          <Route path="/legal" element={<LegalManagement />} />
+          <Route path="/airports" element={<AirportManagement />} /> {/* ✅ إضافة المسار الجديد */}
         </Route>
       </Routes>
     </Router>

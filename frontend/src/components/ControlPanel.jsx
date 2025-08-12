@@ -1,6 +1,5 @@
 // frontend/src/components/ControlPanel.jsx
 import React from "react";
-import { FaSearch, FaTimes } from "react-icons/fa";
 
 const StatusButton = ({ onClick, label, value, activeStatus }) => (
   <button
@@ -16,65 +15,48 @@ const StatusButton = ({ onClick, label, value, activeStatus }) => (
   </button>
 );
 
-export const ControlPanel = ({
-  onStatusChange,
-  onSearchChange,
-  onDateChange,
-  activeStatus,
-  searchQuery,
-  filterDate,
-}) => {
+export const ControlPanel = ({ filters, onFilterChange, monitoredAirportOptions }) => {
+  const handleSelectChange = (e) => {
+    const { name, value } = e.target;
+    onFilterChange((prev) => ({ ...prev, [name]: value }));
+  };
+  
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-secondary rounded-lg shadow-sm">
-      {/* Status Filters */}
+    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-2">
         <StatusButton
-          onClick={onStatusChange}
-          label="All"
+          onClick={(value) => onFilterChange((p) => ({ ...p, status: value }))}
+          label="All Status"
           value="all"
-          activeStatus={activeStatus}
+          activeStatus={filters.status}
         />
         <StatusButton
-          onClick={onStatusChange}
+          onClick={(value) => onFilterChange((p) => ({ ...p, status: value }))}
           label="Delayed"
           value="delayed"
-          activeStatus={activeStatus}
+          activeStatus={filters.status}
         />
         <StatusButton
-          onClick={onStatusChange}
+          onClick={(value) => onFilterChange((p) => ({ ...p, status: value }))}
           label="Cancelled"
           value="cancelled"
-          activeStatus={activeStatus}
+          activeStatus={filters.status}
         />
       </div>
 
-      {/* Search and Date Controls */}
-      <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-        <div className="relative w-full sm:w-64">
-          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-          <input
-            type="search"
-            placeholder="Search flight or airport..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-primary border border-border-color rounded-md focus:ring-2 focus:ring-accent focus:outline-none"
-          />
-          {searchQuery && (
-            <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
-              onClick={() => onSearchChange("")}
-            >
-              <FaTimes />
-            </button>
-          )}
-        </div>
-        <input
-          type="date"
-          value={filterDate}
-          onChange={(e) => onDateChange(e.target.value)}
-          className="w-full sm:w-auto px-3 py-2 bg-primary border border-border-color rounded-md text-text-secondary focus:ring-2 focus:ring-accent focus:outline-none dark:[color-scheme:dark]"
-        />
-      </div>
+      <select
+        name="monitoredAirport"
+        value={filters.monitoredAirport}
+        onChange={handleSelectChange}
+        className="w-full md:w-auto px-3 py-2 bg-primary border border-border-color rounded-md text-text-secondary focus:ring-2 focus:ring-accent focus:outline-none"
+      >
+        <option value="all">All Monitored Airports</option>
+        {monitoredAirportOptions.map((airport) => (
+          <option key={airport.iata} value={airport.iata}>
+            {airport.name} ({airport.iata})
+          </option>
+        ))}
+      </select>
     </div>
   );
 };

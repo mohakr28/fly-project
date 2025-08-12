@@ -9,6 +9,7 @@ const auth = require("../../middleware/auth"); // <-- 1. استيراد الـ m
 // @access  Private (محمي الآن)
 router.get("/", auth, async (req, res) => {
   // <-- 2. إضافة الـ middleware هنا
+  console.log("LOG: [GET /api/flights] Request to fetch flights. Query params:", req.query);
   try {
     const { flightDate, flightNumber, departureAirport } = req.query;
 
@@ -44,12 +45,15 @@ router.get("/", auth, async (req, res) => {
       };
     }
     // --- نهاية التعديل ---
+    
+    console.log("LOG: [GET /api/flights] Constructed DB filter:", filter);
 
     // Fetch flights from DB, sorting by most recent
     const flights = await Flight.find(filter).sort({ scheduledDeparture: -1 });
+    console.log(`LOG: [GET /api/flights] Found ${flights.length} flights matching criteria.`);
     res.json(flights);
   } catch (err) {
-    console.error(err.message);
+    console.error("ERROR: [GET /api/flights] Server Error:", err.message);
     res.status(500).send("Server Error");
   }
 });

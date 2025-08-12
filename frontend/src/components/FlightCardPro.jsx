@@ -13,16 +13,26 @@ import {
   FaCloud,
   FaExclamationTriangle,
   FaInfoCircle,
+  FaBroadcastTower,
 } from "react-icons/fa";
 import airlines from "../data/airlines.json";
 import airports from "../data/airports.json";
 
-// ... (دوال المساعدة تبقى كما هي)
 const getFormattedLocalTime = (dateString, airportInfo) => {
-  /* No change */
+  if (!dateString || !isValid(new Date(dateString)) || !airportInfo?.timezone) {
+    return "--:--";
+  }
+  try {
+    const zonedTime = toZonedTime(dateString, airportInfo.timezone);
+    return formatInTz(zonedTime, airportInfo.timezone, "HH:mm (z)");
+  } catch (error) {
+    return "--:--";
+  }
 };
+
 const getAnalysisAge = (dateString) => {
-  /* No change */
+  if (!dateString || !isValid(new Date(dateString))) return "N/A";
+  return formatDistanceToNowStrict(new Date(dateString), { addSuffix: true });
 };
 
 const WeatherDetail = ({ icon, value, unit, highlightClass = "" }) => {
@@ -85,7 +95,18 @@ const WeatherBlock = ({ weather, type }) => {
   );
 };
 
-const FlightCardPro = ({ flight }) => {
+const AirportDisplay = ({ code, airportInfo, isMonitored }) => (
+  <div>
+    <p className="text-3xl font-bold text-text-primary flex items-center justify-center gap-2">
+      {code} {isMonitored && <FaBroadcastTower className="text-accent text-lg" title="Monitored Airport" />}
+    </p>
+    <p className="text-xs text-text-secondary mt-1 truncate">
+      {airportInfo?.name || "Unknown"}
+    </p>
+  </div>
+);
+
+const FlightCardPro = ({ flight, monitoredIataSet }) => {
   const airlineCode = flight.flightNumber.substring(0, 2);
   const airlineName = airlines[airlineCode] || airlineCode;
   const departureAirportInfo = airports[flight.departureAirport];
@@ -136,29 +157,28 @@ const FlightCardPro = ({ flight }) => {
 
       {/* Flight Path */}
       <div className="p-4 grid grid-cols-[1fr,auto,1fr] items-start gap-4 text-center">
-        <div>
-          <p className="text-3xl font-bold text-text-primary">
-            {flight.departureAirport}
-          </p>
-          <p className="text-xs text-text-secondary mt-1 truncate">
-            {departureAirportInfo?.name || "Unknown"}
-          </p>
-          <p className="mt-2 text-xs font-semibold text-accent bg-accent-light rounded-full inline-block px-2 py-0.5">
-            {formattedLocalTime}
-          </p>
-        </div>
+        <AirportDisplay
+          code={flight.departureAirport}
+          airportInfo={departureAirportInfo}
+          isMonitored={monitoredIataSet.has(flight.departureAirport)}
+        />
         <div className="mt-1 text-text-secondary">
           <FaPlane size={24} />
         </div>
-        <div>
-          <p className="text-3xl font-bold text-text-primary">
-            {flight.arrivalAirport}
-          </p>
-          <p className="text-xs text-text-secondary mt-1 truncate">
-            {arrivalAirportInfo?.name || "Unknown"}
-          </p>
-        </div>
+        <AirportDisplay
+          code={flight.arrivalAirport}
+          airportInfo={arrivalAirportInfo}
+          isMonitored={monitoredIataSet.has(flight.arrivalAirport)}
+        />
       </div>
+
+       {/* Departure Time Info - Moved here for better context */}
+       <div className="text-center pb-4">
+          <p className="text-xs font-semibold text-accent bg-accent-light rounded-full inline-block px-2 py-0.5">
+            Scheduled Departure: {formattedLocalTime}
+          </p>
+      </div>
+
 
       {/* Analysis Section */}
       <div className="p-4 bg-primary border-t border-border-color">

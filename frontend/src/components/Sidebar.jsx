@@ -1,6 +1,7 @@
 // frontend/src/components/Sidebar.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   FaTachometerAlt,
   FaCalendarCheck,
@@ -10,22 +11,23 @@ import {
   FaGavel,
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
+  FaMapMarkedAlt,
 } from "react-icons/fa";
 
-// مكون NavItem المعاد استخدامه
-const NavItem = ({ to, title, icon, isCollapsed }) => (
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const NavItem = ({ to, title, icon, isCollapsed, notificationCount }) => (
   <NavLink
     to={to}
-    className={
-      ({ isActive }) =>
-        `flex items-center gap-4 p-3 rounded-lg font-semibold transition-colors duration-200 ${
-          isCollapsed ? "justify-center" : ""
-        }
+    className={({ isActive }) =>
+      `relative flex items-center gap-4 p-3 rounded-lg font-semibold transition-colors duration-200 ${
+        isCollapsed ? "justify-center" : ""
+      }
        ${
          isActive
-           ? "bg-accent-light text-accent" // ✅ سيتم التبديل تلقائيًا
+           ? "bg-accent-light text-accent"
            : "text-text-secondary hover:bg-tertiary hover:text-text-primary"
-       }` // ✅ سيتم التبديل تلقائيًا
+       }`
     }
     title={title}
   >
@@ -37,11 +39,38 @@ const NavItem = ({ to, title, icon, isCollapsed }) => (
     >
       {title}
     </span>
+    {notificationCount > 0 && (
+      <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
+        {notificationCount}
+      </span>
+    )}
   </NavLink>
 );
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
+  const [pendingEventsCount, setPendingEventsCount] = useState(0);
+
+  // حجم الأيقونات
+  const iconSize = isCollapsed ? 32 : 24;
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const config = { headers: { "x-auth-token": token } };
+        const res = await axios.get(`${API_URL}/api/events/pending-count`, config);
+        setPendingEventsCount(res.data.count);
+      } catch (error) {
+        console.error("Failed to fetch notification counts", error);
+      }
+    };
+
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -51,7 +80,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
   return (
     <aside
       className={`fixed top-0 left-0 h-screen flex flex-col p-4 z-50 transition-transform duration-300 ease-in-out
-                 bg-secondary border-r border-border-color // ✅ استخدام الأسماء العامة
+                 bg-secondary border-r border-border-color
                  ${isCollapsed ? "w-20" : "w-64"}
                  md:translate-x-0 
                  ${
@@ -66,13 +95,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
           isCollapsed ? "justify-center" : ""
         }`}
       >
-        <FaPlaneDeparture className="text-accent text-2xl flex-shrink-0" />
+        <FaPlaneDeparture className="text-accent flex-shrink-0" size={iconSize} />
         <h2
           className={`text-xl font-bold whitespace-nowrap text-text-primary transition-opacity duration-200 ${
             isCollapsed ? "opacity-0 w-0" : "opacity-100"
           }`}
         >
-          FlightDeck
+          JURAI
         </h2>
       </div>
 
@@ -81,19 +110,26 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
         <NavItem
           to="/"
           title="Flight Monitor"
-          icon={<FaTachometerAlt size={20} />}
+          icon={<FaTachometerAlt size={iconSize} />}
           isCollapsed={isCollapsed}
         />
         <NavItem
           to="/events"
           title="Event Review"
-          icon={<FaCalendarCheck size={20} />}
+          icon={<FaCalendarCheck size={iconSize} />}
           isCollapsed={isCollapsed}
+          notificationCount={pendingEventsCount}
         />
         <NavItem
           to="/legal"
           title="Legal Mgmt"
-          icon={<FaGavel size={20} />}
+          icon={<FaGavel size={iconSize} />}
+          isCollapsed={isCollapsed}
+        />
+        <NavItem
+          to="/airports"
+          title="Monitored Airports"
+          icon={<FaMapMarkedAlt size={iconSize} />}
           isCollapsed={isCollapsed}
         />
       </nav>
@@ -103,7 +139,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
         <NavItem
           to="/profile"
           title="Settings"
-          icon={<FaUserCog size={20} />}
+          icon={<FaUserCog size={iconSize} />}
           isCollapsed={isCollapsed}
         />
         <button
@@ -113,7 +149,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
           }`}
           title="Logout"
         >
-          <FaSignOutAlt size={20} />
+          <FaSignOutAlt size={iconSize} />
           <span
             className={`${
               isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
@@ -131,9 +167,9 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
           }`}
         >
           {isCollapsed ? (
-            <FaAngleDoubleRight size={20} />
+            <FaAngleDoubleRight size={iconSize - 4} />
           ) : (
-            <FaAngleDoubleLeft size={20} />
+            <FaAngleDoubleLeft size={iconSize - 4} />
           )}
           <span
             className={`${
