@@ -1,0 +1,196 @@
+openapi: 3.0.0
+info:
+  title: "Flight Project API - Authentication & Legal Search"
+  description: "A detailed documentation for the authentication flow and the legal semantic search endpoint. Users must first log in to obtain a JWT token, which is then used to authorize semantic search requests."
+  version: "1.0.1"
+  contact:
+    name: "API Support"
+    email: "support@example.com"
+
+servers:
+  - url: "https://fly-ixqu.onrender.com/api"
+    description: "Production Server"
+
+tags:
+  - name: "Auth"
+    description: "User Authentication and Token Management"
+  - name: "Legal"
+    description: "Legal Documents and Semantic Search"
+
+paths:
+  # =================================================================
+  # === STEP 1: AUTHENTICATION                                    ===
+  # =================================================================
+  /auth/login:
+    post:
+      tags:
+        - "Auth"
+      summary: "Authenticate a user and get a token"
+      description: "Submit user credentials (username/email and password) to receive a JWT token required for accessing protected endpoints."
+      requestBody:
+        description: "User's login credentials."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              login: "admin"
+              password: "admin"
+      responses:
+        '200':
+          description: "Login successful. The JWT token is returned in the response body."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        '400':
+          description: "Invalid credentials provided."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # =================================================================
+  # === STEP 2: SEMANTIC SEARCH                                   ===
+  # =================================================================
+  /legal/semantic-search:
+    post:
+      tags:
+        - "Legal"
+      summary: "Find relevant articles using semantic search"
+      description: |
+        Performs a semantic search to find the most relevant legal articles based on a natural language description of a case.
+        This process involves:
+        1. Generating a vector embedding for the user's query using an OpenAI model.
+        2. Querying a Pinecone vector database to find the articles with the most similar embeddings.
+        3. Retrieving the full article details from MongoDB.
+        **Authentication is required.** You must include the `x-auth-token` obtained from the login endpoint in the request header.
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: "A description of the case to search for, and optionally the number of results to return."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SemanticSearchRequest'
+            example:
+              caseDescription: "My flight was cancelled due to an air traffic control strike."
+              topK: 3
+      responses:
+        '200':
+          description: "A list of the most relevant legal articles, sorted by relevance."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Article'
+        '400':
+          description: "Bad Request - The 'caseDescription' field is missing from the request body."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: "Unauthorized - The `x-auth-token` is missing or invalid."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: "Internal Server Error - An issue occurred with backend services (e.g., Pinecone, OpenAI)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  # =================================================================
+  # === SECURITY SCHEMES                                          ===
+  # =================================================================
+  securitySchemes:
+    bearerAuth:
+      type: apiKey
+      in: header
+      name: "x-auth-token"
+      description: "Enter the JWT token obtained from the `/auth/login` endpoint. Example: `eyJhbGciOiJIUzI1Ni...`"
+
+  # =================================================================
+  # === REUSABLE SCHEMAS                                          ===
+  # =================================================================
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - login
+        - password
+      properties:
+        login:
+          type: string
+          description: "The user's registered username or email address."
+          example: "admin"
+        password:
+          type: string
+          format: password
+          description: "The user's password."
+          example: "admin"
+
+    AuthToken:
+      type: object
+      properties:
+        token:
+          type: string
+          description: "A JSON Web Token (JWT) for authentication."
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjZjZWEyZDAxMjU0OTg5ZjgyM2MyYjU3In0sImlhdCI6MTcyMzQ3OTI5NCwiZXhwIjoxNzIzNDk3Mjk0fQ.abc123xyz"
+
+    SemanticSearchRequest:
+      type: object
+      required:
+        - caseDescription
+      properties:
+        caseDescription:
+          type: string
+          description: "The natural language description of the flight issue or legal case."
+          example: "My flight was delayed by 5 hours and the airline didn't provide any food or drinks."
+        topK:
+          type: integer
+          description: "The number of top results to return."
+          default: 3
+          example: 3
+
+    Article:
+      type: object
+      description: "Represents a single legal article from a regulation."
+      properties:
+        articleNumber:
+          type: string
+          description: "The official number of the article (e.g., 'Article 5')."
+          example: "Article 5"
+        title:
+          type: string
+          description: "The official title of the article."
+          example: "Cancellation"
+        text:
+          type: string
+          description: "The full text content of the article."
+          example: "1. In case of cancellation of a flight, the passengers concerned shall... 3. An operating air carrier shall not be obliged to pay compensation in accordance with Article 7, if it can prove that the cancellation is caused by extraordinary circumstances..."
+        tags:
+          type: array
+          items:
+            type: string
+          description: "Keywords associated with the article."
+          example: ["cancellation", "assistance", "compensation", "extraordinary_circumstances"]
+        pineconeId:
+          type: string
+          description: "The unique identifier for this article's vector in the Pinecone database."
+          example: "32004R0261-Article5"
+
+    Error:
+      type: object
+      properties:
+        msg:
+          type: string
+          description: "A message describing the error."
+          example: "Invalid Credentials"
