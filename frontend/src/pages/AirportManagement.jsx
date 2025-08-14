@@ -5,6 +5,7 @@ import { useOutletContext } from "react-router-dom";
 import Header from "../components/Header";
 import { useDebounce } from "../components/useDebounce";
 import { FaPlus, FaTrash, FaPlane, FaCheckCircle, FaSearch } from "react-icons/fa";
+import SearchableSelect from "../components/SearchableSelect"; // ✅ 1. استيراد المكون الجديد
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -45,7 +46,7 @@ const AirportManagement = () => {
   const handleAddAirport = async (icao) => {
     try {
       await axios.post(`${API_URL}/api/airports`, { icao }, config);
-      fetchAirports(); // Refresh both lists to update status
+      fetchAirports();
     } catch (err) {
       alert(err.response?.data?.msg || "Failed to add airport.");
     }
@@ -55,7 +56,7 @@ const AirportManagement = () => {
     if (window.confirm("Are you sure you want to stop monitoring this airport?")) {
       try {
         await axios.delete(`${API_URL}/api/airports/${id}`, config);
-        fetchAirports(); // Refresh both lists
+        fetchAirports();
       } catch (err) {
         alert("Could not delete airport. Please try again.");
       }
@@ -138,13 +139,13 @@ const AirportManagement = () => {
               className="w-full pl-10 pr-4 py-2 bg-primary border border-border-color rounded-md focus:ring-2 focus:ring-accent focus:outline-none"
             />
           </div>
-          <select 
+          {/* ✅ 2. استبدال عنصر <select> بالمكون الجديد */}
+          <SearchableSelect
+            options={countryOptions}
             value={filters.country}
-            onChange={e => setFilters(prev => ({...prev, country: e.target.value}))}
-            className="w-full md:w-auto px-3 py-2 bg-primary border border-border-color rounded-md text-text-secondary focus:ring-2 focus:ring-accent focus:outline-none"
-          >
-            {countryOptions.map(country => <option key={country} value={country}>{country}</option>)}
-          </select>
+            onChange={(country) => setFilters(prev => ({ ...prev, country }))}
+            placeholder="Filter by country..."
+          />
         </div>
 
         {/* Airport List Table */}
@@ -160,7 +161,7 @@ const AirportManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color">
-                {filteredAvailableAirports.slice(0, 100).map(airport => { // Limit to 100 results for performance
+                {filteredAvailableAirports.slice(0, 100).map(airport => {
                   const isMonitored = monitoredIcaoSet.has(airport.icao);
                   return (
                     <tr key={airport.icao}>

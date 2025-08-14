@@ -1,31 +1,25 @@
 // backend/routes/api/airports.js
 const express = require("express");
 const router = express.Router();
-const path = require("path");
-const fs = require("fs");
 const auth = require("../../middleware/auth");
 const MonitoredAirport = require("../../models/MonitoredAirport");
-const { getAirportDetailsMap } = require("../../services/airportDataService"); // ✅ 1. استيراد الدالة الجديدة
-
-// Load the full list of European airports from the JSON file
-const allEuropeanAirports = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "../../data/european_airports.json"), "utf8")
-);
+const { getAirportDetailsMap, getAvailableAirportsList } = require("../../services/airportDataService");
 
 // @route   GET /api/airports/details
 // @desc    Get a map of all airport details (IATA -> {name, timezone})
 // @access  Private
 router.get("/details", auth, (req, res) => {
-  // ✅ 2. إضافة نقطة النهاية الجديدة
   const airportMap = getAirportDetailsMap();
   res.json(airportMap);
 });
 
 // @route   GET /api/airports/available
-// @desc    Get all available European airports to choose from
+// @desc    Get all available large/medium airports to choose from
 // @access  Private
 router.get("/available", auth, (req, res) => {
-  res.json(allEuropeanAirports);
+  // ✅ 1. استبدال الملف الثابت بالقائمة الديناميكية
+  const allAirports = getAvailableAirportsList();
+  res.json(allAirports);
 });
 
 // @route   GET /api/airports
@@ -45,15 +39,16 @@ router.get("/", auth, async (req, res) => {
 // @desc    Add a new airport to monitor from the available list
 // @access  Private
 router.post("/", auth, async (req, res) => {
-  const { icao } = req.body; // We only need the ICAO code from the client
+  const { icao } = req.body;
 
   if (!icao) {
     return res.status(400).json({ msg: "Please provide an ICAO code" });
   }
 
   try {
-    // Find the full airport details from our master list
-    const airportToAdd = allEuropeanAirports.find(
+    // ✅ 2. البحث في القائمة الديناميكية الكاملة بدلاً من الملف القديم
+    const allAirports = getAvailableAirportsList();
+    const airportToAdd = allAirports.find(
       (airport) => airport.icao === icao.toUpperCase()
     );
 
@@ -61,7 +56,6 @@ router.post("/", auth, async (req, res) => {
       return res.status(404).json({ msg: "Selected airport not found in the available list" });
     }
 
-    // Check for duplicates in the monitored list
     let alreadyMonitored = await MonitoredAirport.findOne({ icao: airportToAdd.icao });
     if (alreadyMonitored) {
       return res.status(400).json({ msg: "This airport is already being monitored" });
@@ -92,7 +86,8 @@ router.delete("/:id", auth, async (req, res) => {
     }
     await MonitoredAirport.findByIdAndDelete(req.params.id);
     res.json({ msg: "Airport removed" });
-  } catch (err) {
+  } catch (err)
+    {
     console.error(err.message);
     res.status(500).send("Server Error");
   }

@@ -13,7 +13,8 @@ const { initVectorServices } = require("./config/pinecone");
 const { fetchAndProcessFlights } = require("./services/aeroDataBoxService");
 const { fetchAndStoreEvents } = require("./services/eventService");
 const { LegalDocumentMonitor } = require("./services/legalMonitorService");
-const { loadAirportData } = require("./services/airportDataService"); // ✅ 1. استيراد الدالة الجديدة
+const { loadAirportData } = require("./services/airportDataService");
+const { loadCountryData } = require("./services/countryDataService"); // استيراد دالة تحميل الدول
 
 dotenv.config();
 const app = express();
@@ -117,7 +118,8 @@ const startApp = async (appInstance) => {
   try {
     console.log("LOG: Starting server initialization...");
     await connectDB();
-    await loadAirportData(); // ✅ 2. تحميل بيانات المطار قبل بدء تشغيل الخادم
+    await loadCountryData(); // تحميل بيانات الدول أولاً
+    await loadAirportData(); 
     await initVectorServices();
     await createDefaultAdmin();
     await seedInitialRegulation();
