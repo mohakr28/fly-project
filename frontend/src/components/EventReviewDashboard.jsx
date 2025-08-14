@@ -1,10 +1,11 @@
-// frontend/src/components/EventReviewDashboard.jsx
+// frontend/src/pages/EventReviewDashboard.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import axios from "axios";
-import EventReviewCard from "./EventReviewCard";
+import EventReviewCard from "../components/EventReviewCard";
 import { FaClipboardCheck } from "react-icons/fa";
-import Header from "./Header";
+import Header from "../components/Header";
+import PaginationControls from "../components/PaginationControls";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -20,18 +21,24 @@ const NoResults = () => (
 
 const EventReviewDashboard = () => {
   const [pendingEvents, setPendingEvents] = useState([]);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toggleSidebar, theme, toggleTheme } = useOutletContext();
 
-  const fetchPendingEvents = useCallback(async () => {
+  const fetchPendingEvents = useCallback(async (page = 1) => {
     setLoading(true);
     const token = localStorage.getItem("token");
     const config = { headers: { "x-auth-token": token } };
 
     try {
-      const response = await axios.get(`${API_URL}/api/events/pending`, config);
-      setPendingEvents(response.data);
+      const params = new URLSearchParams({ page, limit: 9 });
+      const response = await axios.get(`${API_URL}/api/events/pending?${params.toString()}`, config);
+      setPendingEvents(response.data.events);
+      setPagination({
+        currentPage: response.data.currentPage,
+        totalPages: response.data.totalPages,
+      });
     } catch (error) {
       console.error("Error fetching pending events:", error);
       if (error.response?.status === 401) navigate("/login");
@@ -41,7 +48,7 @@ const EventReviewDashboard = () => {
   }, [navigate]);
 
   useEffect(() => {
-    fetchPendingEvents();
+    fetchPendingEvents(1);
   }, [fetchPendingEvents]);
 
   const handleAction = async (eventId, status, isExtraordinary) => {
@@ -53,10 +60,17 @@ const EventReviewDashboard = () => {
         { status, isExtraordinary },
         config
       );
-      setPendingEvents((prev) => prev.filter((event) => event._id !== eventId));
+      // Refresh the current page
+      fetchPendingEvents(pagination.currentPage);
     } catch (error) {
       console.error(`Error updating event ${eventId}:`, error);
       alert("Failed to update event status. Please try again.");
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage > 0 && newPage <= pagination.totalPages) {
+        fetchPendingEvents(newPage);
     }
   };
 
@@ -74,15 +88,22 @@ const EventReviewDashboard = () => {
       ) : pendingEvents.length === 0 ? (
         <NoResults />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {pendingEvents.map((event) => (
-            <EventReviewCard
-              key={event._id}
-              event={event}
-              onAction={handleAction}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pendingEvents.map((event) => (
+              <EventReviewCard
+                key={event._id}
+                event={event}
+                onAction={handleAction}
+              />
+            ))}
+          </div>
+          <PaginationControls
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+          />
+        </>
       )}
     </div>
   );

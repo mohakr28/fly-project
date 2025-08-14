@@ -5,7 +5,8 @@ import { useOutletContext } from "react-router-dom";
 import Header from "../components/Header";
 import { useDebounce } from "../components/useDebounce";
 import { FaPlus, FaTrash, FaPlane, FaCheckCircle, FaSearch } from "react-icons/fa";
-import SearchableSelect from "../components/SearchableSelect"; // ✅ 1. استيراد المكون الجديد
+import SearchableSelect from "../components/SearchableSelect";
+import PaginationControls from "../components/PaginationControls";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -14,41 +15,78 @@ const AirportManagement = () => {
   const [monitoredAirports, setMonitoredAirports] = useState([]);
   const [availableAirports, setAvailableAirports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-
+  const [isExplorerLoading, setIsExplorerLoading] = useState(true);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
+  const [countryOptions, setCountryOptions] = useState(["All"]);
   const [filters, setFilters] = useState({ query: "", country: "All" });
-  const debouncedQuery = useDebounce(filters.query, 300);
+  const debouncedQuery = useDebounce(filters.query, 400);
 
   const token = localStorage.getItem("token");
   const config = { headers: { "x-auth-token": token } };
 
-  const fetchAirports = useCallback(async () => {
+  const fetchMonitoredAirports = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [monitoredRes, availableRes] = await Promise.all([
-        axios.get(`${API_URL}/api/airports`, config),
-        axios.get(`${API_URL}/api/airports/available`, config),
-      ]);
+      const monitoredRes = await axios.get(`${API_URL}/api/airports`, config);
       setMonitoredAirports(monitoredRes.data);
-      setAvailableAirports(availableRes.data);
     } catch (err) {
-      console.error("Failed to fetch airports", err);
-      setError("Could not load airport data. Please refresh the page.");
+      console.error("Failed to fetch monitored airports", err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
+  const fetchAvailableAirports = useCallback(async (page = 1, currentFilters) => {
+    setIsExplorerLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page,
+        limit: 15,
+        query: currentFilters.query,
+        country: currentFilters.country,
+      });
+      const res = await axios.get(`${API_URL}/api/airports/available?${params.toString()}`, config);
+      setAvailableAirports(res.data.airports);
+      setPagination({
+        currentPage: res.data.currentPage,
+        totalPages: res.data.totalPages,
+      });
+    } catch (err) {
+      console.error("Failed to fetch available airports", err);
+    } finally {
+      setIsExplorerLoading(false);
+    }
+  }, []);
+  
   useEffect(() => {
-    fetchAirports();
-  }, [fetchAirports]);
+    const fetchCountries = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/api/airports/countries`, config);
+            setCountryOptions(["All", ...res.data]);
+        } catch (error) {
+            console.error("Failed to fetch country list", error);
+        }
+    };
+    fetchCountries();
+  }, []);
+
+  useEffect(() => {
+    fetchMonitoredAirports();
+  }, [fetchMonitoredAirports]);
+  
+  useEffect(() => {
+    const currentFilters = { query: debouncedQuery, country: filters.country };
+    fetchAvailableAirports(1, currentFilters);
+  }, [debouncedQuery, filters.country, fetchAvailableAirports]);
 
   const handleAddAirport = async (icao) => {
     try {
       await axios.post(`${API_URL}/api/airports`, { icao }, config);
-      fetchAirports();
+      fetchMonitoredAirports();
     } catch (err) {
-      alert(err.response?.data?.msg || "Failed to add airport.");
+      console.error("Failed to add airport.", err);
+      // Replace alert with a better notification system in the future
+      alert(err.response?.data?.msg || "An error occurred while adding the airport.");
     }
   };
 
@@ -56,30 +94,20 @@ const AirportManagement = () => {
     if (window.confirm("Are you sure you want to stop monitoring this airport?")) {
       try {
         await axios.delete(`${API_URL}/api/airports/${id}`, config);
-        fetchAirports();
+        fetchMonitoredAirports();
       } catch (err) {
-        alert("Could not delete airport. Please try again.");
+        console.error("Could not delete airport.", err);
+        alert("An error occurred while deleting the airport.");
       }
     }
   };
 
-  const countryOptions = useMemo(() => {
-    const countries = new Set(availableAirports.map(a => a.country));
-    return ["All", ...Array.from(countries).sort()];
-  }, [availableAirports]);
-
-  const filteredAvailableAirports = useMemo(() => {
-    return availableAirports.filter(airport => {
-      const queryMatch = debouncedQuery.length === 0 ||
-        airport.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-        airport.icao.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-        airport.iata.toLowerCase().includes(debouncedQuery.toLowerCase());
-      
-      const countryMatch = filters.country === "All" || airport.country === filters.country;
-
-      return queryMatch && countryMatch;
-    });
-  }, [availableAirports, debouncedQuery, filters.country]);
+  const handlePageChange = (newPage) => {
+    if (newPage > 0 && newPage <= pagination.totalPages) {
+        const currentFilters = { query: debouncedQuery, country: filters.country };
+        fetchAvailableAirports(newPage, currentFilters);
+    }
+  };
 
   const monitoredIcaoSet = useMemo(() => new Set(monitoredAirports.map(a => a.icao)), [monitoredAirports]);
 
@@ -92,7 +120,6 @@ const AirportManagement = () => {
         toggleTheme={toggleTheme}
       />
 
-      {/* Monitored Airports Section */}
       <div className="bg-secondary rounded-lg shadow-sm border border-border-color">
         <div className="p-6 border-b border-border-color">
           <h3 className="text-lg font-semibold text-text-primary">Currently Monitored Airports</h3>
@@ -109,9 +136,7 @@ const AirportManagement = () => {
                       <p className="font-semibold text-text-primary">{airport.name}</p>
                       <p className="text-xs text-text-secondary font-mono">{airport.icao} / {airport.iata}</p>
                     </div>
-                    <button onClick={() => handleDeleteAirport(airport._id)} className="ml-2 text-text-secondary hover:text-red-500 transition-colors">
-                      <FaTrash />
-                    </button>
+                    <button onClick={() => handleDeleteAirport(airport._id)} className="ml-2 text-text-secondary hover:text-red-500 transition-colors"> <FaTrash /> </button>
                   </div>
                 ))}
               </div>
@@ -120,26 +145,20 @@ const AirportManagement = () => {
         </div>
       </div>
 
-      {/* Airport Explorer Section */}
       <div className="bg-secondary rounded-lg shadow-sm border border-border-color">
         <div className="p-6 border-b border-border-color">
           <h3 className="text-lg font-semibold text-text-primary">Airport Explorer</h3>
-          <p className="mt-1 text-sm text-text-secondary">Find and add European airports to your monitoring list.</p>
+          <p className="mt-1 text-sm text-text-secondary">Find and add airports to your monitoring list.</p>
         </div>
         
-        {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 p-4 border-b border-border-color">
           <div className="relative flex-grow">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-            <input 
-              type="text" 
-              placeholder="Search by name, ICAO, or IATA..."
-              value={filters.query}
+            <input type="text" placeholder="Search by name, ICAO, or IATA..." value={filters.query}
               onChange={e => setFilters(prev => ({...prev, query: e.target.value}))}
               className="w-full pl-10 pr-4 py-2 bg-primary border border-border-color rounded-md focus:ring-2 focus:ring-accent focus:outline-none"
             />
           </div>
-          {/* ✅ 2. استبدال عنصر <select> بالمكون الجديد */}
           <SearchableSelect
             options={countryOptions}
             value={filters.country}
@@ -148,9 +167,8 @@ const AirportManagement = () => {
           />
         </div>
 
-        {/* Airport List Table */}
         <div className="overflow-x-auto">
-          {isLoading ? (<p className="p-6 text-text-secondary">Loading airport list...</p>) : (
+          {isExplorerLoading ? (<p className="p-6 text-center text-text-secondary">Loading airports...</p>) : (
             <table className="w-full text-sm">
               <thead className="bg-primary">
                 <tr>
@@ -161,7 +179,7 @@ const AirportManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color">
-                {filteredAvailableAirports.slice(0, 100).map(airport => {
+                {availableAirports.map(airport => {
                   const isMonitored = monitoredIcaoSet.has(airport.icao);
                   return (
                     <tr key={airport.icao}>
@@ -170,13 +188,9 @@ const AirportManagement = () => {
                       <td className="p-3 font-mono text-text-secondary">{airport.icao} / {airport.iata}</td>
                       <td className="p-3 text-center">
                         {isMonitored ? (
-                          <span className="flex items-center justify-center gap-2 text-green-500 font-semibold">
-                            <FaCheckCircle /> Monitored
-                          </span>
+                          <span className="flex items-center justify-center gap-2 text-green-500 font-semibold"> <FaCheckCircle /> Monitored </span>
                         ) : (
-                          <button onClick={() => handleAddAirport(airport.icao)} className="px-3 py-1 bg-accent text-white font-semibold text-xs rounded-md hover:bg-opacity-90 transition flex items-center gap-1.5">
-                            <FaPlus /> Add
-                          </button>
+                          <button onClick={() => handleAddAirport(airport.icao)} className="px-3 py-1 bg-accent text-white font-semibold text-xs rounded-md hover:bg-opacity-90 transition flex items-center gap-1.5"> <FaPlus /> Add </button>
                         )}
                       </td>
                     </tr>
@@ -185,9 +199,16 @@ const AirportManagement = () => {
               </tbody>
             </table>
           )}
-          {filteredAvailableAirports.length === 0 && !isLoading && 
+          {availableAirports.length === 0 && !isExplorerLoading && 
             <p className="p-6 text-center text-text-secondary">No airports match your criteria.</p>
           }
+        </div>
+        <div className="p-4 border-t border-border-color">
+            <PaginationControls
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+            />
         </div>
       </div>
     </div>

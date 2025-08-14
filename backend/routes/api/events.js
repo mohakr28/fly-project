@@ -5,18 +5,29 @@ const Event = require("../../models/Event");
 const auth = require("../../middleware/auth");
 
 // @route   GET /api/events/pending
-// @desc    Get all events with 'pending_approval' status
+// @desc    Get paginated events with 'pending_approval' status
 // @access  Private
 router.get("/pending", auth, async (req, res) => {
-  console.log("LOG: [GET /api/events/pending] Request to fetch pending events.");
+  console.log("LOG: [GET /api/events/pending] Request received:", req.query);
   try {
-    const pendingEvents = await Event.find({ status: "pending_approval" }).sort(
-      {
-        createdAt: -1,
-      }
-    );
-    console.log(`LOG: [GET /api/events/pending] Found ${pendingEvents.length} pending events.`);
-    res.json(pendingEvents);
+    const { page = 1, limit = 9 } = req.query; // 9 items fit nicely in a 3-column grid
+
+    const filter = { status: "pending_approval" };
+    
+    const totalEvents = await Event.countDocuments(filter);
+    const pendingEvents = await Event.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+    
+    console.log(`LOG: [GET /api/events/pending] Found ${totalEvents} total, sending page ${page} with ${pendingEvents.length} events.`);
+
+    res.json({
+      events: pendingEvents,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalEvents / limit),
+      totalEvents,
+    });
   } catch (err) {
     console.error("ERROR: [GET /api/events/pending] Server Error:", err.message);
     res.status(500).send("Server Error");
@@ -45,7 +56,6 @@ router.put("/:id/update-status", auth, async (req, res) => {
     }
     await event.save();
 
-    // Update the global count after an action
     if (req.app.locals) {
         const currentCount = await Event.countDocuments({ status: "pending_approval" });
         req.app.locals.pendingEventsCount = currentCount;

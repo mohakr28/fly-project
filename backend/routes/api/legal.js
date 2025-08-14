@@ -8,14 +8,38 @@ const { getPineconeIndex, getOpenAI } = require("../../config/pinecone");
 // --- GET Endpoints (Read) ---
 
 // @route   GET /api/legal/documents
-// @desc    Get all legal documents
+// @desc    Get paginated and filtered legal documents
 // @access  Private
 router.get("/documents", auth, async (req, res) => {
-  console.log("LOG: [GET /api/legal/documents] Request to fetch all legal documents.");
+  console.log("LOG: [GET /api/legal/documents] Request received with query:", req.query);
   try {
-    const documents = await LegalDocument.find().sort({ publicationDate: -1 });
-    console.log(`LOG: [GET /api/legal/documents] Found ${documents.length} documents.`);
-    res.json(documents);
+    const { page = 1, limit = 10, query = '', status = 'all' } = req.query;
+
+    const filter = {};
+    if (query) {
+        filter.$or = [
+            { title: { $regex: query, $options: 'i' } },
+            { celexId: { $regex: query, $options: 'i' } }
+        ];
+    }
+    if (status === 'review') {
+        filter.needsReview = true;
+    } else if (status === 'verified') {
+        filter.needsReview = false;
+    }
+
+    const totalDocuments = await LegalDocument.countDocuments(filter);
+    const documents = await LegalDocument.find(filter)
+      .sort({ publicationDate: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    res.json({
+      documents,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalDocuments / limit),
+      totalDocuments
+    });
   } catch (err) {
     console.error("ERROR: [GET /api/legal/documents] Server Error:", err.message);
     res.status(500).send("Server Error");
@@ -176,7 +200,7 @@ router.delete("/documents/:id", auth, async (req, res) => {
   }
 });
 
-// --- نقطة نهاية البحث الدلالي ---
+// --- Semantic Search Endpoint ---
 // @route   POST /api/legal/semantic-search
 // @desc    Find relevant articles using semantic search
 // @access  Private
@@ -210,7 +234,7 @@ router.post("/semantic-search", auth, async (req, res) => {
         const queryResult = await pineconeIndex.query({
             vector: queryVector,
             topK: parseInt(topK, 10),
-            includeMetadata: false, // Metadata is not needed as we fetch from DB
+            includeMetadata: false,
         });
         
         console.log("LOG: [Semantic Search] Pinecone query successful. Raw matches:", queryResult.matches);
@@ -223,7 +247,6 @@ router.post("/semantic-search", auth, async (req, res) => {
         const pineconeIds = matches.map(match => match.id);
         console.log(`LOG: [Semantic Search] Matched Pinecone IDs: ${pineconeIds.join(', ')}. Fetching from DB...`);
         
-        // Find the regulation that contains ANY of the matched articles
         const regulation = await LegalDocument.findOne({ "articles.pineconeId": { $in: pineconeIds } });
 
         if (!regulation) {
@@ -231,9 +254,8 @@ router.post("/semantic-search", auth, async (req, res) => {
             return res.status(404).json({ msg: "Could not find a regulation containing the matched articles." });
         }
         
-        // Create a map for efficient lookup and sort the results based on Pinecone's relevance order
         const articlesMap = new Map(regulation.articles.map(a => [a.pineconeId, a]));
-        const sortedArticles = pineconeIds.map(id => articlesMap.get(id)).filter(Boolean); // filter(Boolean) removes any nulls if an ID was not found
+        const sortedArticles = pineconeIds.map(id => articlesMap.get(id)).filter(Boolean);
 
         console.log(`LOG: [Semantic Search] Successfully found and sorted ${sortedArticles.length} articles. Sending response.`);
         res.json(sortedArticles);

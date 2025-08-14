@@ -14,12 +14,47 @@ router.get("/details", auth, (req, res) => {
 });
 
 // @route   GET /api/airports/available
-// @desc    Get all available large/medium airports to choose from
+// @desc    Get paginated and filtered list of available airports
 // @access  Private
 router.get("/available", auth, (req, res) => {
-  // ✅ 1. استبدال الملف الثابت بالقائمة الديناميكية
+  // ✅ 1. استخلاص معاملات الترقيم والفلترة
+  const { 
+    page = 1, 
+    limit = 20, // عدد أقل من المطارات في كل صفحة لأن القائمة طويلة
+    query = '', 
+    country = 'All' 
+  } = req.query;
+
   const allAirports = getAvailableAirportsList();
-  res.json(allAirports);
+  
+  // ✅ 2. تطبيق الفلترة على القائمة الكاملة
+  const lowercasedQuery = query.toLowerCase();
+  const filteredAirports = allAirports.filter(airport => {
+    const queryMatch = lowercasedQuery === '' ||
+      airport.name.toLowerCase().includes(lowercasedQuery) ||
+      airport.icao.toLowerCase().includes(lowercasedQuery) ||
+      airport.iata.toLowerCase().includes(lowercasedQuery);
+    
+    const countryMatch = country === 'All' || airport.country === country;
+    
+    return queryMatch && countryMatch;
+  });
+
+  // ✅ 3. تطبيق الترقيم على النتائج المفلترة
+  const startIndex = (page - 1) * limit;
+  const endIndex = page * limit;
+  const paginatedAirports = filteredAirports.slice(startIndex, endIndex);
+
+  const totalAirports = filteredAirports.length;
+  const totalPages = Math.ceil(totalAirports / limit);
+
+  // ✅ 4. إرجاع النتائج المرقّمة مع معلومات الترقيم
+  res.json({
+    airports: paginatedAirports,
+    currentPage: parseInt(page),
+    totalPages: totalPages,
+    totalAirports: totalAirports
+  });
 });
 
 // @route   GET /api/airports
@@ -46,7 +81,6 @@ router.post("/", auth, async (req, res) => {
   }
 
   try {
-    // ✅ 2. البحث في القائمة الديناميكية الكاملة بدلاً من الملف القديم
     const allAirports = getAvailableAirportsList();
     const airportToAdd = allAirports.find(
       (airport) => airport.icao === icao.toUpperCase()
@@ -91,6 +125,59 @@ router.delete("/:id", auth, async (req, res) => {
     console.error(err.message);
     res.status(500).send("Server Error");
   }
+});
+
+
+
+// @route   GET /api/airports/countries
+// @desc    Get a unique list of all available countries
+// @access  Private
+router.get("/countries", auth, (req, res) => {
+    const allAirports = getAvailableAirportsList();
+    const countries = [...new Set(allAirports.map(airport => airport.country))];
+    countries.sort();
+    res.json(countries);
+});
+
+// @route   GET /api/airports/available
+// @desc    Get paginated and filtered list of available airports
+// @access  Private
+router.get("/available", auth, (req, res) => {
+  const { 
+    page = 1, 
+    limit = 20,
+    query = '', 
+    country = 'All' 
+  } = req.query;
+
+  const allAirports = getAvailableAirportsList();
+  
+  const lowercasedQuery = query.toLowerCase();
+  const filteredAirports = allAirports.filter(airport => {
+    const queryMatch = lowercasedQuery === '' ||
+      airport.name.toLowerCase().includes(lowercasedQuery) ||
+      airport.icao.toLowerCase().includes(lowercasedQuery) ||
+      airport.iata.toLowerCase().includes(lowercasedQuery);
+    
+    // ✅ التأكد من أن اسم الدولة موجود قبل الفلترة
+    const countryMatch = country === 'All' || (airport.country && airport.country === country);
+    
+    return queryMatch && countryMatch;
+  });
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = page * limit;
+  const paginatedAirports = filteredAirports.slice(startIndex, endIndex);
+
+  const totalAirports = filteredAirports.length;
+  const totalPages = Math.ceil(totalAirports / limit);
+
+  res.json({
+    airports: paginatedAirports,
+    currentPage: parseInt(page),
+    totalPages: totalPages,
+    totalAirports: totalAirports
+  });
 });
 
 module.exports = router;

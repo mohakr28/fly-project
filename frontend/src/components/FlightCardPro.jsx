@@ -15,8 +15,8 @@ import {
   FaInfoCircle,
   FaBroadcastTower,
 } from "react-icons/fa";
-import airlines from "../data/airlines.json";
-import { useAirports } from "../context/AirportContext"; // ✅ 1. استيراد الخطاف
+// ✅ 1. تم حذف استيراد ملف airlines.json
+import { useAirports } from "../context/AirportContext";
 
 const getFormattedLocalTime = (dateString, airportInfo) => {
   if (!dateString || !isValid(new Date(dateString)) || !airportInfo?.timezone) {
@@ -101,18 +101,14 @@ const AirportDisplay = ({ code, airportInfo, isMonitored }) => (
       {code} {isMonitored && <FaBroadcastTower className="text-accent text-lg" title="Monitored Airport" />}
     </p>
     <p className="text-xs text-text-secondary mt-1 truncate">
-      {airportInfo?.name || "Loading..."} {/* ✅ تعديل بسيط لإظهار حالة التحميل */}
+      {airportInfo?.name || "Loading..."}
     </p>
   </div>
 );
 
 const FlightCardPro = ({ flight, monitoredIataSet }) => {
-  const { airports } = useAirports(); // ✅ 2. استخدام بيانات المطارات من الـ Context
-
-  const airlineCode = flight.flightNumber.substring(0, 2);
-  const airlineName = airlines[airlineCode] || airlineCode;
+  const { airports } = useAirports();
   
-  // ✅ 3. الحصول على تفاصيل المطار من الخريطة التي تم جلبها
   const departureAirportInfo = airports[flight.departureAirport];
   const arrivalAirportInfo = airports[flight.arrivalAirport];
 
@@ -150,8 +146,9 @@ const FlightCardPro = ({ flight, monitoredIataSet }) => {
     >
       {/* Card Header */}
       <div className="flex justify-between items-center p-4 border-b border-border-color">
+        {/* ✅ 2. تم تبسيط هذا السطر لعرض رقم الرحلة فقط */}
         <span className="font-bold text-text-primary">
-          {airlineName} ({flight.flightNumber})
+          {flight.flightNumber}
         </span>
         <span
           className={`px-3 py-1 text-xs font-bold uppercase rounded-full ${currentStatus.badgeBg} ${currentStatus.badgeText}`}

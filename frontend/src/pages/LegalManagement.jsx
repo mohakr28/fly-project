@@ -4,46 +4,18 @@ import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 import Header from "../components/Header";
 import Modal from "../components/Modal";
+import PaginationControls from "../components/PaginationControls";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "../components/useDebounce";
-import {
-  FaPlus, FaEdit, FaTrash, FaExclamationTriangle, FaCheckCircle,
-  FaSave, FaTimes, FaChevronDown, FaSearch
-} from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaExclamationTriangle, FaCheckCircle, FaSave, FaTimes, FaChevronDown, FaSearch } from "react-icons/fa";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const FormCard = ({ children }) => <div className="bg-secondary">{children}</div>;
-
-const FormField = ({ label, name, helpText, children }) => (
-  <div>
-    <label
-      htmlFor={name}
-      className="block text-sm font-medium text-text-primary mb-1"
-    >
-      {label}
-    </label>
-    {children}
-    {helpText && (
-      <p className="mt-1.5 text-xs text-text-secondary">{helpText}</p>
-    )}
-  </div>
-);
-
-const initialFormState = {
-  _id: null, celexId: "", documentType: "regulation", title: "",
-  summary: "", publicationDate: "", keywords: "",
-};
-
-const StatusButton = ({ onClick, label, value, activeStatus }) => (
-    <button
-        onClick={() => onClick(value)}
-        className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${ activeStatus === value ? "bg-accent text-white" : "bg-primary text-text-secondary hover:bg-tertiary"}`}
-    >
-        {label}
-    </button>
-);
+const FormField = ({ label, name, helpText, children }) => ( <div> <label htmlFor={name} className="block text-sm font-medium text-text-primary mb-1"> {label} </label> {children} {helpText && <p className="mt-1.5 text-xs text-text-secondary">{helpText}</p>} </div> );
+const initialFormState = { _id: null, celexId: "", documentType: "regulation", title: "", summary: "", publicationDate: "", keywords: "", };
+const StatusButton = ({ onClick, label, value, activeStatus }) => ( <button onClick={() => onClick(value)} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${ activeStatus === value ? "bg-accent text-white" : "bg-primary text-text-secondary hover:bg-tertiary"}`} > {label} </button> );
 
 const LegalManagement = () => {
   const { toggleSidebar, theme, toggleTheme } = useOutletContext();
@@ -53,18 +25,28 @@ const LegalManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedRow, setExpandedRow] = useState(null);
-
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [filters, setFilters] = useState({ query: "", status: "all" });
-  const debouncedQuery = useDebounce(filters.query, 300);
+  const debouncedQuery = useDebounce(filters.query, 400);
 
   const token = localStorage.getItem("token");
   const config = { headers: { "x-auth-token": token } };
 
-  const fetchDocuments = useCallback(async () => {
+  const fetchDocuments = useCallback(async (page = 1, currentFilters) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API_URL}/api/legal/documents`, config);
-      setDocuments(res.data);
+      const params = new URLSearchParams({
+        page,
+        limit: 10,
+        query: currentFilters.query,
+        status: currentFilters.status,
+      });
+      const res = await axios.get(`${API_URL}/api/legal/documents?${params.toString()}`, config);
+      setDocuments(res.data.documents);
+      setPagination({
+          currentPage: res.data.currentPage,
+          totalPages: res.data.totalPages,
+      });
     } catch (error) {
       console.error("Failed to fetch documents", error);
     } finally {
@@ -73,115 +55,56 @@ const LegalManagement = () => {
   }, []);
 
   useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
+    const currentFilters = { query: debouncedQuery, status: filters.status };
+    fetchDocuments(1, currentFilters);
+  }, [debouncedQuery, filters.status, fetchDocuments]);
   
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingDoc(null);
-    setFormData(initialFormState);
-  };
+  const closeModal = () => { setIsModalOpen(false); setEditingDoc(null); setFormData(initialFormState); };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
+  const handleInputChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    const dataToSubmit = {
-      ...formData,
-      keywords: formData.keywords.split(",").map((k) => k.trim()).filter(Boolean),
-    };
+    const dataToSubmit = { ...formData, keywords: formData.keywords.split(",").map((k) => k.trim()).filter(Boolean), };
     try {
       if (editingDoc) {
         await axios.put(`${API_URL}/api/legal/documents/${editingDoc._id}`, dataToSubmit, config);
       } else {
         await axios.post(`${API_URL}/api/legal/documents`, dataToSubmit, config);
       }
-      fetchDocuments();
+      fetchDocuments(pagination.currentPage, { query: debouncedQuery, status: filters.status });
       closeModal();
     } catch (error) {
       alert(error.response?.data?.msg || "An error occurred.");
     }
   };
 
-  const handleEdit = (doc) => {
-    setEditingDoc(doc);
-    setFormData({
-      ...doc,
-      publicationDate: format(new Date(doc.publicationDate), "yyyy-MM-dd"),
-      keywords: (doc.keywords || []).join(", "),
-    });
-    setIsModalOpen(true);
-  };
+  const handleEdit = (doc) => { setEditingDoc(doc); setFormData({ ...doc, publicationDate: format(new Date(doc.publicationDate), "yyyy-MM-dd"), keywords: (doc.keywords || []).join(", "), }); setIsModalOpen(true); };
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this document?")) {
       try {
         await axios.delete(`${API_URL}/api/legal/documents/${id}`, config);
-        fetchDocuments();
-      } catch (error) {
-        console.error("Failed to delete document", error);
-      }
+        fetchDocuments(pagination.currentPage, { query: debouncedQuery, status: filters.status });
+      } catch (error) { console.error("Failed to delete document", error); }
     }
   };
+  
+  const openNewForm = () => { setEditingDoc(null); setFormData(initialFormState); setIsModalOpen(true); };
 
-  const handleMarkReviewed = async (id) => {
-    try {
-      await axios.put(`${API_URL}/api/legal/mark-reviewed/${id}`, {}, config);
-      fetchDocuments();
-    } catch (error) {
-      console.error("Failed to mark as reviewed", error);
+  const handlePageChange = (newPage) => {
+    if (newPage > 0 && newPage <= pagination.totalPages) {
+      fetchDocuments(newPage, { query: debouncedQuery, status: filters.status });
     }
   };
-    
-  const openNewForm = () => {
-    setEditingDoc(null);
-    setFormData(initialFormState);
-    setIsModalOpen(true);
-  };
-
-  const filteredDocuments = useMemo(() => {
-    return documents.filter(doc => {
-        const query = debouncedQuery.toLowerCase();
-        const searchMatch = query === "" || 
-            doc.title.toLowerCase().includes(query) ||
-            doc.celexId.toLowerCase().includes(query);
-            
-        const statusMatch = filters.status === 'all' ||
-            (filters.status === 'review' && doc.needsReview) ||
-            (filters.status === 'verified' && !doc.needsReview);
-
-        return searchMatch && statusMatch;
-    });
-  }, [documents, debouncedQuery, filters.status]);
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-6">
-      <Header
-        title="Legal Document Management"
-        toggleSidebar={toggleSidebar}
-        theme={theme}
-        toggleTheme={toggleTheme}
-        actions={
-            <button onClick={openNewForm} className="px-4 py-2 bg-accent text-white font-semibold text-sm rounded-md hover:bg-opacity-90 transition flex items-center gap-2">
-                <FaPlus /> Add New
-            </button>
-        }
-      />
-
-      {/* Control Panel for Legal Docs */}
+      <Header title="Legal Document Management" toggleSidebar={toggleSidebar} theme={theme} toggleTheme={toggleTheme} actions={ <button onClick={openNewForm} className="px-4 py-2 bg-accent text-white font-semibold text-sm rounded-md hover:bg-opacity-90 transition flex items-center gap-2"> <FaPlus /> Add New </button> } />
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-secondary rounded-lg shadow-sm">
         <div className="relative flex-grow w-full">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-            <input 
-                type="search"
-                placeholder="Search by title or Celex ID..."
-                value={filters.query}
-                onChange={e => setFilters(p => ({...p, query: e.target.value}))}
-                className="w-full pl-10 pr-4 py-2 bg-primary border border-border-color rounded-md focus:ring-2 focus:ring-accent focus:outline-none"
-            />
+            <input type="search" placeholder="Search by title or Celex ID..." value={filters.query} onChange={e => setFilters(p => ({...p, query: e.target.value}))} className="w-full pl-10 pr-4 py-2 bg-primary border border-border-color rounded-md focus:ring-2 focus:ring-accent focus:outline-none" />
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
             <StatusButton onClick={(value) => setFilters(p => ({...p, status: value}))} label="All" value="all" activeStatus={filters.status} />
@@ -189,8 +112,6 @@ const LegalManagement = () => {
             <StatusButton onClick={(value) => setFilters(p => ({...p, status: value}))} label="Verified" value="verified" activeStatus={filters.status} />
         </div>
       </div>
-      
-      {/* Existing Documents table */}
       <div className="bg-secondary rounded-lg shadow-sm border border-border-color">
         <div className="overflow-x-auto">
           {isLoading ? (<p className="p-6">Loading documents...</p>) : (
@@ -205,7 +126,7 @@ const LegalManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color">
-                {filteredDocuments.map((doc) => (
+                {documents.map((doc) => (
                   <Fragment key={doc._id}>
                     <tr>
                       <td className="p-3 text-center">
@@ -260,12 +181,10 @@ const LegalManagement = () => {
               </tbody>
             </table>
           )}
-          {filteredDocuments.length === 0 && !isLoading && 
-            <p className="p-6 text-center text-text-secondary">No documents match your criteria.</p>
-          }
+          {documents.length === 0 && !isLoading &&  <p className="p-6 text-center text-text-secondary">No documents match your criteria.</p> }
         </div>
       </div>
-
+      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingDoc ? "Edit Document" : "Add New Document"}>
         <FormCard>
           <form onSubmit={handleFormSubmit}>

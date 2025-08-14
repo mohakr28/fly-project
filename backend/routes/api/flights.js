@@ -2,56 +2,75 @@
 const express = require("express");
 const router = express.Router();
 const Flight = require("../../models/Flight");
-const auth = require("../../middleware/auth"); // <-- 1. استيراد الـ middleware
+const auth = require("../../middleware/auth");
 
 // @route   GET /api/flights
-// @desc    Get all relevant flights with filtering
-// @access  Private (محمي الآن)
+// @desc    Get paginated and filtered flights
+// @access  Private
 router.get("/", auth, async (req, res) => {
-  // <-- 2. إضافة الـ middleware هنا
-  console.log("LOG: [GET /api/flights] Request to fetch flights. Query params:", req.query);
+  console.log("LOG: [GET /api/flights] Request received with query:", req.query);
+
   try {
-    const { flightDate, flightNumber, departureAirport } = req.query;
+    // 1. استخلاص معاملات الترقيم والفلترة من الطلب
+    const {
+      page = 1,
+      limit = 12, // عدد العناصر في كل صفحة (يمكن تعديله)
+      status,
+      searchQuery,
+      date,
+      airline,
+      minDelay,
+      monitoredAirport,
+    } = req.query;
 
     const filter = {};
 
-    // Build the filter object based on query parameters
-    if (flightNumber) {
-      // البحث عن أي رحلة "تحتوي" على النص المدخل (بحث جزئي وغير حساس لحالة الأحرف)
-      filter.flightNumber = { $regex: flightNumber, $options: "i" };
+    // 2. بناء كائن الفلترة لقاعدة البيانات بناءً على المعاملات
+    if (status && status !== 'all') {
+      // تحويل 'delayed' -> 'Delayed', 'cancelled' -> 'Cancelled'
+      filter.status = status.charAt(0).toUpperCase() + status.slice(1);
     }
-    if (departureAirport) {
-      // البحث عن أي مطار "يحتوي" على النص المدخل
-      filter.departureAirport = {
-        $regex: departureAirport,
-        $options: "i",
-      };
+    if (searchQuery) {
+      filter.flightNumber = { $regex: searchQuery, $options: "i" };
     }
-
-    // --- تعديل منطق فلتر التاريخ ---
-    if (flightDate) {
-      // flightDate هو سلسلة نصية مثل "2025-06-25"
-      // ننشئ تاريخ بداية اليوم المحدد بالتوقيت العالمي (UTC)
-      const startOfDay = new Date(`${flightDate}T00:00:00.000Z`);
-
-      // ننشئ تاريخ نهاية اليوم المحدد بالتوقيت العالمي (UTC)
-      const endOfDay = new Date(`${flightDate}T23:59:59.999Z`);
-
-      // الآن نبحث عن أي رحلة يقع وقت مغادرتها المجدول (المخزن بـ UTC)
-      // ضمن هذا النطاق الزمني ليوم كامل.
-      filter.scheduledDeparture = {
-        $gte: startOfDay,
-        $lte: endOfDay,
-      };
+    if (date) {
+      const startOfDay = new Date(`${date}T00:00:00.000Z`);
+      const endOfDay = new Date(`${date}T23:59:59.999Z`);
+      filter.scheduledDeparture = { $gte: startOfDay, $lte: endOfDay };
     }
-    // --- نهاية التعديل ---
+    if (airline) {
+      // يبحث عن رقم رحلة يبدأ برمز شركة الطيران
+      filter.flightNumber = { ...filter.flightNumber, $regex: `^${airline}${filter.flightNumber?.$regex || '.*'}` , $options: "i"};
+    }
+    if (minDelay) {
+      filter.delayDuration = { $gte: parseInt(minDelay, 10) };
+    }
+    if (monitoredAirport && monitoredAirport !== 'all') {
+      filter.$or = [
+          { departureAirport: monitoredAirport },
+          { arrivalAirport: monitoredAirport }
+      ];
+    }
     
-    console.log("LOG: [GET /api/flights] Constructed DB filter:", filter);
+    console.log("LOG: [GET /api/flights] Constructed DB filter:", JSON.stringify(filter));
 
-    // Fetch flights from DB, sorting by most recent
-    const flights = await Flight.find(filter).sort({ scheduledDeparture: -1 });
-    console.log(`LOG: [GET /api/flights] Found ${flights.length} flights matching criteria.`);
-    res.json(flights);
+    // 3. تنفيذ استعلامين: واحد للعدد الإجمالي وواحد لبيانات الصفحة
+    const totalFlights = await Flight.countDocuments(filter);
+    const flights = await Flight.find(filter)
+      .sort({ scheduledDeparture: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    console.log(`LOG: [GET /api/flights] Found ${totalFlights} total flights, sending page ${page} with ${flights.length} items.`);
+
+    // 4. إرجاع البيانات مع معلومات الترقيم
+    res.json({
+      flights,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalFlights / limit),
+      totalFlights,
+    });
+
   } catch (err) {
     console.error("ERROR: [GET /api/flights] Server Error:", err.message);
     res.status(500).send("Server Error");
