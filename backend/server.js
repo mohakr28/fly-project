@@ -13,6 +13,7 @@ const { initVectorServices } = require("./config/pinecone");
 const { fetchAndProcessFlights } = require("./services/aeroDataBoxService");
 const { fetchAndStoreEvents } = require("./services/eventService");
 const { LegalDocumentMonitor } = require("./services/legalMonitorService");
+const { loadAirportData } = require("./services/airportDataService"); // ✅ 1. استيراد الدالة الجديدة
 
 dotenv.config();
 const app = express();
@@ -31,7 +32,7 @@ app.use("/api/events", require("./routes/api/events"));
 app.use("/api/auth", require("./routes/api/auth"));
 app.use("/api/users", require("./routes/api/users"));
 app.use("/api/legal", require("./routes/api/legal"));
-app.use("/api/airports", require("./routes/api/airports")); // ✅ إضافة المسار الجديد
+app.use("/api/airports", require("./routes/api/airports"));
 
 const createDefaultAdmin = async () => {
   try {
@@ -116,6 +117,7 @@ const startApp = async (appInstance) => {
   try {
     console.log("LOG: Starting server initialization...");
     await connectDB();
+    await loadAirportData(); // ✅ 2. تحميل بيانات المطار قبل بدء تشغيل الخادم
     await initVectorServices();
     await createDefaultAdmin();
     await seedInitialRegulation();

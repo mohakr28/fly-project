@@ -16,7 +16,7 @@ import {
   FaBroadcastTower,
 } from "react-icons/fa";
 import airlines from "../data/airlines.json";
-import airports from "../data/airports.json";
+import { useAirports } from "../context/AirportContext"; // ✅ 1. استيراد الخطاف
 
 const getFormattedLocalTime = (dateString, airportInfo) => {
   if (!dateString || !isValid(new Date(dateString)) || !airportInfo?.timezone) {
@@ -101,16 +101,21 @@ const AirportDisplay = ({ code, airportInfo, isMonitored }) => (
       {code} {isMonitored && <FaBroadcastTower className="text-accent text-lg" title="Monitored Airport" />}
     </p>
     <p className="text-xs text-text-secondary mt-1 truncate">
-      {airportInfo?.name || "Unknown"}
+      {airportInfo?.name || "Loading..."} {/* ✅ تعديل بسيط لإظهار حالة التحميل */}
     </p>
   </div>
 );
 
 const FlightCardPro = ({ flight, monitoredIataSet }) => {
+  const { airports } = useAirports(); // ✅ 2. استخدام بيانات المطارات من الـ Context
+
   const airlineCode = flight.flightNumber.substring(0, 2);
   const airlineName = airlines[airlineCode] || airlineCode;
+  
+  // ✅ 3. الحصول على تفاصيل المطار من الخريطة التي تم جلبها
   const departureAirportInfo = airports[flight.departureAirport];
   const arrivalAirportInfo = airports[flight.arrivalAirport];
+
   const formattedLocalTime = getFormattedLocalTime(
     flight.scheduledDeparture,
     departureAirportInfo

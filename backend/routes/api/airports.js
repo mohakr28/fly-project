@@ -5,11 +5,21 @@ const path = require("path");
 const fs = require("fs");
 const auth = require("../../middleware/auth");
 const MonitoredAirport = require("../../models/MonitoredAirport");
+const { getAirportDetailsMap } = require("../../services/airportDataService"); // ✅ 1. استيراد الدالة الجديدة
 
 // Load the full list of European airports from the JSON file
 const allEuropeanAirports = JSON.parse(
   fs.readFileSync(path.join(__dirname, "../../data/european_airports.json"), "utf8")
 );
+
+// @route   GET /api/airports/details
+// @desc    Get a map of all airport details (IATA -> {name, timezone})
+// @access  Private
+router.get("/details", auth, (req, res) => {
+  // ✅ 2. إضافة نقطة النهاية الجديدة
+  const airportMap = getAirportDetailsMap();
+  res.json(airportMap);
+});
 
 // @route   GET /api/airports/available
 // @desc    Get all available European airports to choose from
