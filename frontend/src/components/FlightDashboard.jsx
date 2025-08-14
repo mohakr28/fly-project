@@ -1,14 +1,14 @@
-// frontend/src/components/FlightDashboard.jsx
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+// frontend/src/pages/FlightDashboard.jsx
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import axios from "axios";
 import { useOutletContext, Link } from "react-router-dom";
-import { useDebounce } from "./useDebounce";
+import { useDebounce } from "../components/useDebounce";
 import { motion, AnimatePresence } from "framer-motion";
-import DashboardStats from "./DashboardStats";
-import FlightGrid from "./FlightGrid";
-import { ControlPanel } from "./ControlPanel";
-import Header from "./Header";
-import PaginationControls from "./PaginationControls";
+import DashboardStats from "../components/DashboardStats";
+import FlightGrid from "../components/FlightGrid";
+import { ControlPanel } from "../components/ControlPanel";
+import Header from "../components/Header";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
 import { FaPlusCircle, FaFilter, FaSearch, FaTimes } from "react-icons/fa";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -66,23 +66,20 @@ const FlightDashboard = () => {
   const { toggleSidebar, theme, toggleTheme } = useOutletContext();
   const [flights, setFlights] = useState([]);
   const [monitoredAirports, setMonitoredAirports] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalFlights: 0 });
-
   const [filters, setFilters] = useState({
-    status: "all",
-    searchQuery: "",
-    date: "",
-    airline: "",
-    minDelay: "",
-    monitoredAirport: "all",
+    status: "all", searchQuery: "", date: "",
+    airline: "", minDelay: "", monitoredAirport: "all",
   });
 
   const debouncedSearchQuery = useDebounce(filters.searchQuery, 400);
   const debouncedMinDelay = useDebounce(filters.minDelay, 400);
 
-  const fetchData = useCallback(async (page, currentFilters) => {
+  const loaderRef = useRef(null);
+
+  const fetchData = useCallback(async (page, currentFilters, isLoadMore = false) => {
     setLoading(true);
     const token = localStorage.getItem("token");
     if (!token) {
@@ -101,15 +98,15 @@ const FlightDashboard = () => {
             }
         }
         
-        const params = new URLSearchParams({
-            page,
-            limit: 12,
-            ...currentFilters
-        });
-        
+        const params = new URLSearchParams({ page, limit: 12, ...currentFilters });
         const flightsRes = await axios.get(`${API_URL}/api/flights?${params.toString()}`, config);
         
-        setFlights(flightsRes.data.flights);
+        if (isLoadMore) {
+            setFlights(prev => [...prev, ...flightsRes.data.flights]);
+        } else {
+            setFlights(flightsRes.data.flights);
+        }
+
         setPagination({
             currentPage: flightsRes.data.currentPage,
             totalPages: flightsRes.data.totalPages,
@@ -125,15 +122,30 @@ const FlightDashboard = () => {
 
   useEffect(() => {
     const currentDebouncedFilters = {
-        searchQuery: debouncedSearchQuery,
-        minDelay: debouncedMinDelay,
-        status: filters.status,
-        date: filters.date,
-        airline: filters.airline,
-        monitoredAirport: filters.monitoredAirport,
+        searchQuery: debouncedSearchQuery, minDelay: debouncedMinDelay, status: filters.status,
+        date: filters.date, airline: filters.airline, monitoredAirport: filters.monitoredAirport,
     };
-    fetchData(1, currentDebouncedFilters);
+    fetchData(1, currentDebouncedFilters, false);
   }, [
+    debouncedSearchQuery, debouncedMinDelay, filters.status,
+    filters.date, filters.airline, filters.monitoredAirport, fetchData
+  ]);
+
+  const hasNextPage = pagination.currentPage < pagination.totalPages;
+
+  // ✅ --- التعديل الرئيسي هنا ---
+  const loadMore = useCallback(() => {
+      const currentFilters = {
+          searchQuery: debouncedSearchQuery,
+          minDelay: debouncedMinDelay,
+          status: filters.status,
+          date: filters.date,
+          airline: filters.airline,
+          monitoredAirport: filters.monitoredAirport,
+      };
+      fetchData(pagination.currentPage + 1, currentFilters, true);
+  }, [
+    pagination.currentPage,
     debouncedSearchQuery,
     debouncedMinDelay,
     filters.status,
@@ -141,21 +153,9 @@ const FlightDashboard = () => {
     filters.airline,
     filters.monitoredAirport,
     fetchData
-  ]);
+  ]); // ✅ استخدام القيم الأولية بدلاً من كائن filters
 
-  const handlePageChange = (newPage) => {
-    if (newPage > 0 && newPage <= pagination.totalPages) {
-        const currentFilters = {
-            searchQuery: debouncedSearchQuery,
-            minDelay: debouncedMinDelay,
-            status: filters.status,
-            date: filters.date,
-            airline: filters.airline,
-            monitoredAirport: filters.monitoredAirport,
-        };
-        fetchData(newPage, currentFilters);
-    }
-  };
+  useInfiniteScroll(loaderRef, loading, hasNextPage, loadMore);
 
   const airlineOptions = useMemo(() => {
     const staticOptions = ["SK", "DY", "LH", "AF", "FR", "BA", "U2", "KL"];
@@ -174,7 +174,7 @@ const FlightDashboard = () => {
         toggleTheme={toggleTheme}
         actions={ <SearchBar query={filters.searchQuery} onChange={(value) => setFilters(prev => ({...prev, searchQuery: value}))} /> }
       />
-      {monitoredAirports.length === 0 && !loading ? <NoAirportsMessage /> : (
+      {monitoredAirports.length === 0 && !loading && flights.length === 0 ? <NoAirportsMessage /> : (
           <>
             <DashboardStats 
                 total={pagination.totalFlights} 
@@ -199,17 +199,17 @@ const FlightDashboard = () => {
                 )}
             </AnimatePresence>
 
-            <FlightGrid flights={flights} loading={loading} monitoredAirports={monitoredAirports} />
+            <FlightGrid flights={flights} loading={loading && flights.length === 0} monitoredAirports={monitoredAirports} />
             
-            <PaginationControls
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              onPageChange={handlePageChange}
-            />
+            <div ref={loaderRef} className="col-span-full h-10 flex items-center justify-center text-text-secondary">
+                {loading && flights.length > 0 && <p>Loading more flights...</p>}
+                {!loading && !hasNextPage && flights.length > 0 && <p>You have reached the end.</p>}
+            </div>
           </>
         )
       }
     </div>
   );
 };
+
 export default FlightDashboard;

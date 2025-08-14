@@ -15,20 +15,31 @@ import {
   FaInfoCircle,
   FaBroadcastTower,
 } from "react-icons/fa";
-// ✅ 1. تم حذف استيراد ملف airlines.json
 import { useAirports } from "../context/AirportContext";
 
+// ✅ --- التعديل الرئيسي هنا ---
 const getFormattedLocalTime = (dateString, airportInfo) => {
-  if (!dateString || !isValid(new Date(dateString)) || !airportInfo?.timezone) {
+  // 1. التحقق الأساسي: إذا لم يكن هناك تاريخ صالح، أرجع القيمة الافتراضية
+  if (!dateString || !isValid(new Date(dateString))) {
     return "--:--";
   }
-  try {
-    const zonedTime = toZonedTime(dateString, airportInfo.timezone);
-    return formatInTz(zonedTime, airportInfo.timezone, "HH:mm (z)");
-  } catch (error) {
-    return "--:--";
+
+  // 2. الحالة المثالية: لدينا معلومات المنطقة الزمنية
+  if (airportInfo?.timezone) {
+    try {
+      const zonedTime = toZonedTime(dateString, airportInfo.timezone);
+      return formatInTz(zonedTime, airportInfo.timezone, "HH:mm (z)");
+    } catch (error) {
+      // في حالة فشل التنسيق لسبب ما، سنعتمد على الخيار الاحتياطي أدناه
+      console.error(`Timezone formatting failed for ${airportInfo.timezone}:`, error);
+    }
   }
+  
+  // 3. الخيار الاحتياطي: إذا لم تتوفر المنطقة الزمنية، اعرض الوقت بصيغة UTC
+  // حرف 'Z' في نهاية التاريخ يعني أنه بالفعل بصيغة UTC
+  return format(new Date(dateString), "HH:mm") + " (UTC)";
 };
+// --- نهاية التعديل ---
 
 const getAnalysisAge = (dateString) => {
   if (!dateString || !isValid(new Date(dateString))) return "N/A";
@@ -144,9 +155,7 @@ const FlightCardPro = ({ flight, monitoredIataSet }) => {
       layout
       className={`bg-secondary rounded-lg shadow-sm border-l-4 ${currentStatus.border} transition-shadow hover:shadow-lg flex flex-col`}
     >
-      {/* Card Header */}
       <div className="flex justify-between items-center p-4 border-b border-border-color">
-        {/* ✅ 2. تم تبسيط هذا السطر لعرض رقم الرحلة فقط */}
         <span className="font-bold text-text-primary">
           {flight.flightNumber}
         </span>
@@ -157,7 +166,6 @@ const FlightCardPro = ({ flight, monitoredIataSet }) => {
         </span>
       </div>
 
-      {/* Flight Path */}
       <div className="p-4 grid grid-cols-[1fr,auto,1fr] items-start gap-4 text-center">
         <AirportDisplay
           code={flight.departureAirport}
@@ -174,7 +182,6 @@ const FlightCardPro = ({ flight, monitoredIataSet }) => {
         />
       </div>
 
-       {/* Departure Time Info - Moved here for better context */}
        <div className="text-center pb-4">
           <p className="text-xs font-semibold text-accent bg-accent-light rounded-full inline-block px-2 py-0.5">
             Scheduled Departure: {formattedLocalTime}
@@ -182,7 +189,6 @@ const FlightCardPro = ({ flight, monitoredIataSet }) => {
       </div>
 
 
-      {/* Analysis Section */}
       <div className="p-4 bg-primary border-t border-border-color">
         <h3 className="text-xs font-bold uppercase text-text-secondary tracking-wider mb-3">
           Analysis & Evidence
@@ -210,7 +216,6 @@ const FlightCardPro = ({ flight, monitoredIataSet }) => {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="flex justify-between items-center p-3 bg-primary text-xs text-text-secondary border-t border-border-color mt-auto">
         <span className="flex items-center gap-2">
           <FaFighterJet /> {flight.aircraftModel || "N/A"}

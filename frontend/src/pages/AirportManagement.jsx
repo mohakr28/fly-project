@@ -1,12 +1,12 @@
 // frontend/src/pages/AirportManagement.jsx
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 import Header from "../components/Header";
 import { useDebounce } from "../components/useDebounce";
 import { FaPlus, FaTrash, FaPlane, FaCheckCircle, FaSearch } from "react-icons/fa";
 import SearchableSelect from "../components/SearchableSelect";
-import PaginationControls from "../components/PaginationControls";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll"; // ✅ 1. استيراد الخطاف
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -14,8 +14,8 @@ const AirportManagement = () => {
   const { toggleSidebar, theme, toggleTheme } = useOutletContext();
   const [monitoredAirports, setMonitoredAirports] = useState([]);
   const [availableAirports, setAvailableAirports] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isExplorerLoading, setIsExplorerLoading] = useState(true);
+  const [isLoadingMonitored, setIsLoadingMonitored] = useState(true);
+  const [isExplorerLoading, setIsExplorerLoading] = useState(false);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [countryOptions, setCountryOptions] = useState(["All"]);
   const [filters, setFilters] = useState({ query: "", country: "All" });
@@ -23,41 +23,51 @@ const AirportManagement = () => {
 
   const token = localStorage.getItem("token");
   const config = { headers: { "x-auth-token": token } };
+  
+  const loaderRef = useRef(null); // ✅ 2. Ref لعنصر التحميل
 
   const fetchMonitoredAirports = useCallback(async () => {
-    setIsLoading(true);
+    setIsLoadingMonitored(true);
     try {
       const monitoredRes = await axios.get(`${API_URL}/api/airports`, config);
       setMonitoredAirports(monitoredRes.data);
     } catch (err) {
       console.error("Failed to fetch monitored airports", err);
     } finally {
-      setIsLoading(false);
+      setIsLoadingMonitored(false);
     }
   }, []);
 
-  const fetchAvailableAirports = useCallback(async (page = 1, currentFilters) => {
+  const fetchAvailableAirports = useCallback(async (page = 1, currentFilters, isLoadMore = false) => {
     setIsExplorerLoading(true);
     try {
       const params = new URLSearchParams({
         page,
-        limit: 15,
+        limit: 20, // 20 مطارًا في الصفحة
         query: currentFilters.query,
         country: currentFilters.country,
       });
+
       const res = await axios.get(`${API_URL}/api/airports/available?${params.toString()}`, config);
-      setAvailableAirports(res.data.airports);
+      
+      if (isLoadMore) {
+          setAvailableAirports(prev => [...prev, ...res.data.airports]);
+      } else {
+          setAvailableAirports(res.data.airports);
+      }
+      
       setPagination({
         currentPage: res.data.currentPage,
         totalPages: res.data.totalPages,
       });
+
     } catch (err) {
       console.error("Failed to fetch available airports", err);
     } finally {
       setIsExplorerLoading(false);
     }
   }, []);
-  
+
   useEffect(() => {
     const fetchCountries = async () => {
         try {
@@ -68,25 +78,28 @@ const AirportManagement = () => {
         }
     };
     fetchCountries();
-  }, []);
-
-  useEffect(() => {
     fetchMonitoredAirports();
   }, [fetchMonitoredAirports]);
   
   useEffect(() => {
     const currentFilters = { query: debouncedQuery, country: filters.country };
-    fetchAvailableAirports(1, currentFilters);
+    fetchAvailableAirports(1, currentFilters, false);
   }, [debouncedQuery, filters.country, fetchAvailableAirports]);
+
+  const hasNextPage = pagination.currentPage < pagination.totalPages;
+  const loadMore = useCallback(() => {
+      const currentFilters = { query: debouncedQuery, country: filters.country };
+      fetchAvailableAirports(pagination.currentPage + 1, currentFilters, true);
+  }, [pagination.currentPage, debouncedQuery, filters.country, fetchAvailableAirports]);
+
+  useInfiniteScroll(loaderRef, isExplorerLoading, hasNextPage, loadMore); // ✅ 3. استخدام الخطاف
 
   const handleAddAirport = async (icao) => {
     try {
       await axios.post(`${API_URL}/api/airports`, { icao }, config);
       fetchMonitoredAirports();
     } catch (err) {
-      console.error("Failed to add airport.", err);
-      // Replace alert with a better notification system in the future
-      alert(err.response?.data?.msg || "An error occurred while adding the airport.");
+      alert(err.response?.data?.msg || "Failed to add airport.");
     }
   };
 
@@ -96,16 +109,8 @@ const AirportManagement = () => {
         await axios.delete(`${API_URL}/api/airports/${id}`, config);
         fetchMonitoredAirports();
       } catch (err) {
-        console.error("Could not delete airport.", err);
-        alert("An error occurred while deleting the airport.");
+        alert("Could not delete airport. Please try again.");
       }
-    }
-  };
-
-  const handlePageChange = (newPage) => {
-    if (newPage > 0 && newPage <= pagination.totalPages) {
-        const currentFilters = { query: debouncedQuery, country: filters.country };
-        fetchAvailableAirports(newPage, currentFilters);
     }
   };
 
@@ -126,7 +131,7 @@ const AirportManagement = () => {
           <p className="mt-1 text-sm text-text-secondary">Flights from these airports are actively being tracked.</p>
         </div>
         <div className="p-6">
-          {isLoading ? <p>Loading...</p> : (
+          {isLoadingMonitored ? <p>Loading...</p> : (
             monitoredAirports.length > 0 ? (
               <div className="flex flex-wrap gap-4">
                 {monitoredAirports.map(airport => (
@@ -168,7 +173,7 @@ const AirportManagement = () => {
         </div>
 
         <div className="overflow-x-auto">
-          {isExplorerLoading ? (<p className="p-6 text-center text-text-secondary">Loading airports...</p>) : (
+          {availableAirports.length > 0 && (
             <table className="w-full text-sm">
               <thead className="bg-primary">
                 <tr>
@@ -199,16 +204,14 @@ const AirportManagement = () => {
               </tbody>
             </table>
           )}
-          {availableAirports.length === 0 && !isExplorerLoading && 
+          {/* ✅ 4. عرض مؤشر التحميل والنهاية */}
+          <div ref={loaderRef} className="h-10 flex items-center justify-center text-text-secondary">
+            {isExplorerLoading && <p>Loading more airports...</p>}
+            {!isExplorerLoading && !hasNextPage && availableAirports.length > 0 && <p>You have reached the end.</p>}
+          </div>
+          {!isExplorerLoading && availableAirports.length === 0 && 
             <p className="p-6 text-center text-text-secondary">No airports match your criteria.</p>
           }
-        </div>
-        <div className="p-4 border-t border-border-color">
-            <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
-            />
         </div>
       </div>
     </div>

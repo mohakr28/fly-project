@@ -1,13 +1,13 @@
 // frontend/src/pages/LegalManagement.jsx
-import React, { useState, useEffect, useCallback, useMemo, Fragment } from "react";
+import React, { useState, useEffect, useCallback, Fragment, useRef } from "react";
 import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 import Header from "../components/Header";
 import Modal from "../components/Modal";
-import PaginationControls from "../components/PaginationControls";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "../components/useDebounce";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
 import { FaPlus, FaEdit, FaTrash, FaExclamationTriangle, FaCheckCircle, FaSave, FaTimes, FaChevronDown, FaSearch } from "react-icons/fa";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -23,26 +23,36 @@ const LegalManagement = () => {
   const [editingDoc, setEditingDoc] = useState(null);
   const [formData, setFormData] = useState(initialFormState);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
+  
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
+  
   const [filters, setFilters] = useState({ query: "", status: "all" });
   const debouncedQuery = useDebounce(filters.query, 400);
 
   const token = localStorage.getItem("token");
   const config = { headers: { "x-auth-token": token } };
 
-  const fetchDocuments = useCallback(async (page = 1, currentFilters) => {
+  const loaderRef = useRef(null);
+
+  const fetchDocuments = useCallback(async (page, currentFilters, isLoadMore = false) => {
     setIsLoading(true);
     try {
-      const params = new URLSearchParams({
-        page,
-        limit: 10,
-        query: currentFilters.query,
-        status: currentFilters.status,
+      const params = new URLSearchParams({ 
+          page, 
+          limit: 10, 
+          query: currentFilters.query,
+          status: currentFilters.status
       });
       const res = await axios.get(`${API_URL}/api/legal/documents?${params.toString()}`, config);
-      setDocuments(res.data.documents);
+      
+      if (isLoadMore) {
+        setDocuments(prevDocs => [...prevDocs, ...res.data.documents]);
+      } else {
+        setDocuments(res.data.documents);
+      }
+      
       setPagination({
           currentPage: res.data.currentPage,
           totalPages: res.data.totalPages,
@@ -56,9 +66,17 @@ const LegalManagement = () => {
 
   useEffect(() => {
     const currentFilters = { query: debouncedQuery, status: filters.status };
-    fetchDocuments(1, currentFilters);
+    fetchDocuments(1, currentFilters, false);
   }, [debouncedQuery, filters.status, fetchDocuments]);
   
+  const hasNextPage = pagination.currentPage < pagination.totalPages;
+  const loadMore = useCallback(() => {
+      const currentFilters = { query: debouncedQuery, status: filters.status };
+      fetchDocuments(pagination.currentPage + 1, currentFilters, true);
+  }, [pagination.currentPage, debouncedQuery, filters.status, fetchDocuments]);
+
+  useInfiniteScroll(loaderRef, isLoading, hasNextPage, loadMore);
+
   const closeModal = () => { setIsModalOpen(false); setEditingDoc(null); setFormData(initialFormState); };
 
   const handleInputChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
@@ -72,7 +90,7 @@ const LegalManagement = () => {
       } else {
         await axios.post(`${API_URL}/api/legal/documents`, dataToSubmit, config);
       }
-      fetchDocuments(pagination.currentPage, { query: debouncedQuery, status: filters.status });
+      fetchDocuments(1, { query: debouncedQuery, status: filters.status }, false);
       closeModal();
     } catch (error) {
       alert(error.response?.data?.msg || "An error occurred.");
@@ -85,18 +103,12 @@ const LegalManagement = () => {
     if (window.confirm("Are you sure you want to delete this document?")) {
       try {
         await axios.delete(`${API_URL}/api/legal/documents/${id}`, config);
-        fetchDocuments(pagination.currentPage, { query: debouncedQuery, status: filters.status });
+        fetchDocuments(1, { query: debouncedQuery, status: filters.status }, false);
       } catch (error) { console.error("Failed to delete document", error); }
     }
   };
   
   const openNewForm = () => { setEditingDoc(null); setFormData(initialFormState); setIsModalOpen(true); };
-
-  const handlePageChange = (newPage) => {
-    if (newPage > 0 && newPage <= pagination.totalPages) {
-      fetchDocuments(newPage, { query: debouncedQuery, status: filters.status });
-    }
-  };
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-6">
@@ -114,7 +126,7 @@ const LegalManagement = () => {
       </div>
       <div className="bg-secondary rounded-lg shadow-sm border border-border-color">
         <div className="overflow-x-auto">
-          {isLoading ? (<p className="p-6">Loading documents...</p>) : (
+          {documents.length > 0 && (
             <table className="w-full text-sm">
               <thead className="bg-primary">
                 <tr>
@@ -181,10 +193,13 @@ const LegalManagement = () => {
               </tbody>
             </table>
           )}
-          {documents.length === 0 && !isLoading &&  <p className="p-6 text-center text-text-secondary">No documents match your criteria.</p> }
+          <div ref={loaderRef} className="h-10 flex items-center justify-center text-text-secondary">
+            {isLoading && <p>Loading more documents...</p>}
+            {!isLoading && !hasNextPage && documents.length > 0 && <p>You have reached the end.</p>}
+          </div>
+          {!isLoading && documents.length === 0 && <p className="p-6 text-center text-text-secondary">No documents match your criteria.</p> }
         </div>
       </div>
-      <PaginationControls currentPage={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingDoc ? "Edit Document" : "Add New Document"}>
         <FormCard>
           <form onSubmit={handleFormSubmit}>

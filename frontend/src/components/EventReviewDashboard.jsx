@@ -1,11 +1,11 @@
 // frontend/src/pages/EventReviewDashboard.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import axios from "axios";
 import EventReviewCard from "../components/EventReviewCard";
 import { FaClipboardCheck } from "react-icons/fa";
 import Header from "../components/Header";
-import PaginationControls from "../components/PaginationControls";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll"; // ✅ 1. استيراد الخطاف
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -22,11 +22,13 @@ const NoResults = () => (
 const EventReviewDashboard = () => {
   const [pendingEvents, setPendingEvents] = useState([]);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toggleSidebar, theme, toggleTheme } = useOutletContext();
+  
+  const loaderRef = useRef(null); // ✅ 2. Ref لعنصر التحميل
 
-  const fetchPendingEvents = useCallback(async (page = 1) => {
+  const fetchPendingEvents = useCallback(async (page = 1, isLoadMore = false) => {
     setLoading(true);
     const token = localStorage.getItem("token");
     const config = { headers: { "x-auth-token": token } };
@@ -34,7 +36,13 @@ const EventReviewDashboard = () => {
     try {
       const params = new URLSearchParams({ page, limit: 9 });
       const response = await axios.get(`${API_URL}/api/events/pending?${params.toString()}`, config);
-      setPendingEvents(response.data.events);
+      
+      if (isLoadMore) {
+        setPendingEvents(prevEvents => [...prevEvents, ...response.data.events]);
+      } else {
+        setPendingEvents(response.data.events);
+      }
+
       setPagination({
         currentPage: response.data.currentPage,
         totalPages: response.data.totalPages,
@@ -48,8 +56,15 @@ const EventReviewDashboard = () => {
   }, [navigate]);
 
   useEffect(() => {
-    fetchPendingEvents(1);
+    fetchPendingEvents(1, false);
   }, [fetchPendingEvents]);
+
+  const hasNextPage = pagination.currentPage < pagination.totalPages;
+  const loadMore = useCallback(() => {
+      fetchPendingEvents(pagination.currentPage + 1, true);
+  }, [pagination.currentPage, fetchPendingEvents]);
+
+  useInfiniteScroll(loaderRef, loading, hasNextPage, loadMore); // ✅ 3. استخدام الخطاف
 
   const handleAction = async (eventId, status, isExtraordinary) => {
     const token = localStorage.getItem("token");
@@ -60,17 +75,11 @@ const EventReviewDashboard = () => {
         { status, isExtraordinary },
         config
       );
-      // Refresh the current page
-      fetchPendingEvents(pagination.currentPage);
+      // ✅ 4. تحديث القائمة بإعادة تحميل الصفحة الأولى
+      fetchPendingEvents(1, false);
     } catch (error) {
       console.error(`Error updating event ${eventId}:`, error);
       alert("Failed to update event status. Please try again.");
-    }
-  };
-
-  const handlePageChange = (newPage) => {
-    if (newPage > 0 && newPage <= pagination.totalPages) {
-        fetchPendingEvents(newPage);
     }
   };
 
@@ -83,9 +92,7 @@ const EventReviewDashboard = () => {
         toggleTheme={toggleTheme}
       />
 
-      {loading ? (
-        <p className="text-center text-text-secondary">Loading events...</p>
-      ) : pendingEvents.length === 0 ? (
+      {pendingEvents.length === 0 && !loading ? (
         <NoResults />
       ) : (
         <>
@@ -98,11 +105,11 @@ const EventReviewDashboard = () => {
               />
             ))}
           </div>
-          <PaginationControls
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            onPageChange={handlePageChange}
-          />
+          {/* ✅ 5. عرض مؤشر التحميل والنهاية */}
+          <div ref={loaderRef} className="h-10 flex items-center justify-center text-text-secondary">
+            {loading && <p>Loading more events...</p>}
+            {!loading && !hasNextPage && pendingEvents.length > 0 && <p>You have reached the end.</p>}
+          </div>
         </>
       )}
     </div>
