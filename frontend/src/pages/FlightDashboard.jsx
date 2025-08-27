@@ -9,8 +9,9 @@ import FlightGrid from "../components/FlightGrid";
 import { ControlPanel } from "../components/ControlPanel";
 import Header from "../components/Header";
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
-import SearchableSelect from "../components/SearchableSelect";
 import { FaPlusCircle, FaFilter, FaSearch, FaTimes } from "react-icons/fa";
+import SearchableSelect from "../components/SearchableSelect";
+import { useAirports } from "../context/AirportContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -27,22 +28,27 @@ const NoAirportsMessage = () => (
         </Link>
     </div>
 );
-
-const AdvancedFilters = ({ filters, onFilterChange, airlineOptions, onAirlineChange, selectedAirlineValue }) => {
+const AdvancedFilters = ({ filters, onFilterChange, airlineOptions, onAirlineChange, selectedAirlineValue, airlineSearchTerm, onAirlineSearchChange, isAirlineLoading }) => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         onFilterChange((prev) => ({ ...prev, [name]: value }));
     };
     return (
         <motion.div
-            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }} className="overflow-hidden" >
+            initial={{ height: 0, opacity: 0 }} 
+            animate={{ height: "auto", opacity: 1 }} 
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }} 
+        >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-secondary rounded-lg shadow-sm">
                 <SearchableSelect
                     options={airlineOptions}
                     value={selectedAirlineValue}
                     onChange={onAirlineChange}
                     placeholder="Filter by airline..."
+                    onInputChange={onAirlineSearchChange}
+                    inputValue={airlineSearchTerm}
+                    isLoading={isAirlineLoading}
                 />
                 <input type="number" name="minDelay" placeholder="Minimum Delay (minutes)" value={filters.minDelay}
                     onChange={handleInputChange} min="0"
@@ -53,7 +59,6 @@ const AdvancedFilters = ({ filters, onFilterChange, airlineOptions, onAirlineCha
         </motion.div>
     );
 };
-
 const SearchBar = ({ query, onChange }) => (
     <div className="relative flex-grow">
         <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
@@ -68,6 +73,7 @@ const SearchBar = ({ query, onChange }) => (
 
 const FlightDashboard = () => {
   const { toggleSidebar, theme, toggleTheme } = useOutletContext();
+  const { airports, isLoading: isAirportsLoading } = useAirports(); // ✅ 1. استدعاء بيانات المطارات هنا
   const [flights, setFlights] = useState([]);
   const [monitoredAirports, setMonitoredAirports] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -77,11 +83,14 @@ const FlightDashboard = () => {
     status: "all", searchQuery: "", date: "",
     airline: "", minDelay: "", monitoredAirport: "all",
   });
+  
   const [airlineOptions, setAirlineOptions] = useState([]);
+  const [airlineSearchTerm, setAirlineSearchTerm] = useState('');
+  const [isAirlineLoading, setIsAirlineLoading] = useState(false);
+  const debouncedAirlineSearch = useDebounce(airlineSearchTerm, 300);
 
   const debouncedSearchQuery = useDebounce(filters.searchQuery, 400);
   const debouncedMinDelay = useDebounce(filters.minDelay, 400);
-
   const loaderRef = useRef(null);
 
   const fetchData = useCallback(async (page, currentFilters, isLoadMore = false) => {
@@ -89,44 +98,44 @@ const FlightDashboard = () => {
     const token = localStorage.getItem("token");
     if (!token) { window.location.href = "/login"; return; }
     const config = { headers: { "x-auth-token": token } };
-
     try {
         if (monitoredAirports.length === 0) {
             const airportsRes = await axios.get(`${API_URL}/api/airports`, config);
             setMonitoredAirports(airportsRes.data);
             if (airportsRes.data.length === 0) { setLoading(false); return; }
         }
-        
         const params = new URLSearchParams({ page, limit: 12, ...currentFilters });
         const flightsRes = await axios.get(`${API_URL}/api/flights?${params.toString()}`, config);
-        
         if (isLoadMore) { setFlights(prev => [...prev, ...flightsRes.data.flights]); } 
         else { setFlights(flightsRes.data.flights); }
-
         setPagination({
             currentPage: flightsRes.data.currentPage,
             totalPages: flightsRes.data.totalPages,
             totalFlights: flightsRes.data.totalFlights
         });
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error("Error fetching data:", error); } 
+    finally { setLoading(false); }
   }, [monitoredAirports.length]);
 
   useEffect(() => {
     const fetchAirlines = async () => {
+        setIsAirlineLoading(true);
         const token = localStorage.getItem("token");
         if (!token) return;
         try {
-            const res = await axios.get(`${API_URL}/api/airlines/available`, { headers: { "x-auth-token": token } });
-            setAirlineOptions(res.data);
-        } catch (error) { console.error("Failed to fetch airlines", error); }
+            const params = new URLSearchParams({ query: debouncedAirlineSearch });
+            const res = await axios.get(`${API_URL}/api/airlines/available?${params.toString()}`, { headers: { "x-auth-token": token } });
+            const formattedOptions = res.data.map(a => `${a.name} (${a.code})`);
+            setAirlineOptions(["All Airlines", ...formattedOptions]);
+        } catch (error) { 
+            console.error("Failed to fetch airlines", error); 
+            setAirlineOptions(["All Airlines"]);
+        } finally {
+            setIsAirlineLoading(false);
+        }
     };
     fetchAirlines();
-  }, []);
+  }, [debouncedAirlineSearch]);
 
   useEffect(() => {
     const currentDebouncedFilters = {
@@ -137,7 +146,6 @@ const FlightDashboard = () => {
   }, [ debouncedSearchQuery, debouncedMinDelay, filters.status, filters.date, filters.airline, filters.monitoredAirport, fetchData ]);
 
   const hasNextPage = pagination.currentPage < pagination.totalPages;
-
   const loadMore = useCallback(() => {
       const currentFilters = {
           searchQuery: debouncedSearchQuery, minDelay: debouncedMinDelay, status: filters.status,
@@ -145,30 +153,28 @@ const FlightDashboard = () => {
       };
       fetchData(pagination.currentPage + 1, currentFilters, true);
   }, [ pagination.currentPage, debouncedSearchQuery, debouncedMinDelay, filters.status, filters.date, filters.airline, filters.monitoredAirport, fetchData ]);
-
   useInfiniteScroll(loaderRef, loading, hasNextPage, loadMore);
-
-  const formattedAirlineOptions = useMemo(() => 
-      airlineOptions.map(a => `${a.name} (${a.code})`), 
-  [airlineOptions]);
-
+  
   const selectedAirlineDisplayValue = useMemo(() => {
-      if (!filters.airline) return "";
-      const found = airlineOptions.find(a => a.code === filters.airline);
-      return found ? `${found.name} (${found.code})` : "";
+      if (!filters.airline) return "All Airlines";
+      const foundOption = airlineOptions.find(opt => opt.includes(`(${filters.airline})`));
+      return foundOption || `Airline (${filters.airline})`;
   }, [filters.airline, airlineOptions]);
 
   const handleAirlineChange = (selectedValue) => {
       let airlineCode = "";
-      if (selectedValue) {
+      if (selectedValue && selectedValue !== "All Airlines") {
           const match = selectedValue.match(/\(([^)]+)\)$/);
           if (match && match[1]) { airlineCode = match[1]; }
       }
       setFilters(prev => ({ ...prev, airline: airlineCode }));
+      setAirlineSearchTerm('');
   };
 
   const delayedCount = flights.filter(f => f.status === 'Delayed').length;
   const cancelledCount = flights.filter(f => f.status === 'Cancelled').length;
+  
+  const isInitialLoading = (loading || isAirportsLoading) && flights.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -186,7 +192,6 @@ const FlightDashboard = () => {
                 delayed={delayedCount} 
                 cancelled={cancelledCount} 
             />
-            
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-secondary rounded-lg shadow-sm p-4">
               <ControlPanel
                   filters={filters}
@@ -198,23 +203,27 @@ const FlightDashboard = () => {
               </button>
             </div>
             
-            {/* ✅ ==== التعديل الرئيسي هنا ==== */}
-            {/* إضافة `relative` و `z-20` لرفع مستوى هذه الحاوية */}
             <div className="relative z-20">
-              <AnimatePresence>
-                  {showAdvancedFilters && (
-                      <AdvancedFilters 
-                          filters={filters} 
-                          onFilterChange={setFilters} 
-                          airlineOptions={formattedAirlineOptions}
-                          onAirlineChange={handleAirlineChange}
-                          selectedAirlineValue={selectedAirlineDisplayValue}
-                      />
-                  )}
-              </AnimatePresence>
+                <AnimatePresence>
+                    {showAdvancedFilters && (
+                        <AdvancedFilters 
+                            filters={filters} 
+                            onFilterChange={setFilters} 
+                            airlineOptions={airlineOptions}
+                            onAirlineChange={handleAirlineChange}
+                            selectedAirlineValue={selectedAirlineDisplayValue}
+                            airlineSearchTerm={airlineSearchTerm}
+                            onAirlineSearchChange={setAirlineSearchTerm}
+                            isAirlineLoading={isAirlineLoading}
+                        />
+                    )}
+                </AnimatePresence>
             </div>
 
-            <FlightGrid flights={flights} loading={loading && flights.length === 0} monitoredAirports={monitoredAirports} />
+            <div className="relative z-10">
+              {/* ✅ 2. تمرير بيانات المطارات إلى FlightGrid */}
+              <FlightGrid flights={flights} loading={isInitialLoading} monitoredAirports={monitoredAirports} airports={airports} />
+            </div>
             
             <div ref={loaderRef} className="col-span-full h-10 flex items-center justify-center text-text-secondary">
                 {loading && flights.length > 0 && <p>Loading more flights...</p>}

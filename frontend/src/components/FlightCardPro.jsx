@@ -2,7 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { format, formatDistanceToNowStrict, isValid } from "date-fns";
-import { toZonedTime, format as formatInTz } from "date-fns-tz";
+import { format as formatInTz } from "date-fns-tz";
 import {
   FaPlane,
   FaFighterJet,
@@ -15,31 +15,20 @@ import {
   FaInfoCircle,
   FaBroadcastTower,
 } from "react-icons/fa";
-import { useAirports } from "../context/AirportContext";
 
-// ✅ --- التعديل الرئيسي هنا ---
 const getFormattedLocalTime = (dateString, airportInfo) => {
-  // 1. التحقق الأساسي: إذا لم يكن هناك تاريخ صالح، أرجع القيمة الافتراضية
   if (!dateString || !isValid(new Date(dateString))) {
     return "--:--";
   }
-
-  // 2. الحالة المثالية: لدينا معلومات المنطقة الزمنية
   if (airportInfo?.timezone) {
     try {
-      const zonedTime = toZonedTime(dateString, airportInfo.timezone);
-      return formatInTz(zonedTime, airportInfo.timezone, "HH:mm (z)");
+      return formatInTz(dateString, "HH:mm (z)", { timeZone: airportInfo.timezone });
     } catch (error) {
-      // في حالة فشل التنسيق لسبب ما، سنعتمد على الخيار الاحتياطي أدناه
       console.error(`Timezone formatting failed for ${airportInfo.timezone}:`, error);
     }
   }
-  
-  // 3. الخيار الاحتياطي: إذا لم تتوفر المنطقة الزمنية، اعرض الوقت بصيغة UTC
-  // حرف 'Z' في نهاية التاريخ يعني أنه بالفعل بصيغة UTC
   return format(new Date(dateString), "HH:mm") + " (UTC)";
 };
-// --- نهاية التعديل ---
 
 const getAnalysisAge = (dateString) => {
   if (!dateString || !isValid(new Date(dateString))) return "N/A";
@@ -117,11 +106,9 @@ const AirportDisplay = ({ code, airportInfo, isMonitored }) => (
   </div>
 );
 
-const FlightCardPro = ({ flight, monitoredIataSet }) => {
-  const { airports } = useAirports();
-  
-  const departureAirportInfo = airports[flight.departureAirport];
-  const arrivalAirportInfo = airports[flight.arrivalAirport];
+const FlightCardPro = ({ flight, monitoredIataSet, airports }) => {
+  const departureAirportInfo = airports ? airports[flight.departureAirport] : null;
+  const arrivalAirportInfo = airports ? airports[flight.arrivalAirport] : null;
 
   const formattedLocalTime = getFormattedLocalTime(
     flight.scheduledDeparture,
@@ -228,4 +215,4 @@ const FlightCardPro = ({ flight, monitoredIataSet }) => {
   );
 };
 
-export default FlightCardPro;
+export default React.memo(FlightCardPro);

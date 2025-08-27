@@ -20,28 +20,21 @@ const loadAirlineData = () => {
     const tempList = [];
 
     fs.createReadStream(csvFilePath)
-      // ✅ ==== التعديل الرئيسي هنا ====
       .pipe(csv({ 
-          separator: '^', // 1. تحديد الفاصل الجديد
-          mapHeaders: ({ header }) => header.trim() // 2. تنظيف أسماء الأعمدة كإجراء احترازي
+          separator: '^', 
+          mapHeaders: ({ header }) => header.trim()
       }))
       .on('data', (data) => {
-        // ✅ 3. استخدام أسماء الأعمدة الجديدة (iata_code و name)
         if (data.iata_code && data.name && data.iata_code.trim() !== "" && data.name.trim() !== "") {
             tempList.push({
-                code: data.iata_code.trim(), // استخدام iata_code
-                name: data.name.trim()       // استخدام name
+                code: data.iata_code.trim(),
+                name: data.name.trim()
             });
         }
       })
-      // =============================
       .on('end', () => {
-        // فلترة وإزالة أي إدخالات مكررة بناءً على الرمز
         const uniqueAirlines = Array.from(new Map(tempList.map(item => [item.code, item])).values());
-        
-        // ترتيب شركات الطيران أبجدياً حسب الاسم
         availableAirlines = uniqueAirlines.sort((a, b) => a.name.localeCompare(b.name));
-        
         console.log(`✅ LOG: [AirlineDataService] Successfully loaded. Found ${availableAirlines.length} unique airlines.`);
         resolve();
       })
@@ -52,8 +45,22 @@ const loadAirlineData = () => {
   });
 };
 
-const getAvailableAirlines = () => {
-  return availableAirlines;
+const getAvailableAirlines = (query = '') => {
+  if (!query) {
+    // إذا لم يكن هناك بحث، أرجع أول 50 نتيجة كعينة أولية
+    return availableAirlines.slice(0, 50);
+  }
+
+  const lowercasedQuery = query.toLowerCase();
+  
+  // قم بالفلترة بناءً على الاسم أو الرمز
+  const filtered = availableAirlines.filter(airline => 
+    airline.name.toLowerCase().includes(lowercasedQuery) || 
+    airline.code.toLowerCase().includes(lowercasedQuery)
+  );
+  
+  // أرجع أول 50 نتيجة مطابقة
+  return filtered.slice(0, 50);
 };
 
 module.exports = {

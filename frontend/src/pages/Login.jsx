@@ -46,7 +46,7 @@ const Login = () => {
       <div className="bg-secondary p-8 sm:p-10 rounded-xl shadow-lg w-full max-w-md text-center border border-border-color">
         <h2 className="text-3xl font-bold text-text-primary mb-2">Login</h2>
         <p className="text-text-secondary mb-6">
-          Access your FlightDeck dashboard.
+          Access your JURAI dashboard.
         </p>
 
         <form onSubmit={onSubmit}>
@@ -98,15 +98,7 @@ const Login = () => {
           </button>
         </form>
 
-        <p className="text-sm text-text-secondary mt-8">
-          Don't have an account?{" "}
-          <Link
-            to="/register"
-            className="font-semibold text-accent hover:underline"
-          >
-            Register here
-          </Link>
-        </p>
+     
       </div>
     </div>
   );

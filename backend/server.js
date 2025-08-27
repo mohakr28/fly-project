@@ -14,7 +14,8 @@ const { fetchAndProcessFlights } = require("./services/aeroDataBoxService");
 const { fetchAndStoreEvents } = require("./services/eventService");
 const { LegalDocumentMonitor } = require("./services/legalMonitorService");
 const { loadAirportData } = require("./services/airportDataService");
-const { loadCountryData } = require("./services/countryDataService"); // استيراد دالة تحميل الدول
+const { loadCountryData } = require("./services/countryDataService");
+const { loadAirlineData } = require("./services/airlineDataService"); // ✅ 1. استيراد دالة تحميل شركات الطيران
 
 dotenv.config();
 const app = express();
@@ -34,6 +35,7 @@ app.use("/api/auth", require("./routes/api/auth"));
 app.use("/api/users", require("./routes/api/users"));
 app.use("/api/legal", require("./routes/api/legal"));
 app.use("/api/airports", require("./routes/api/airports"));
+app.use("/api/airlines", require("./routes/api/airlines")); // ✅ 2. تسجيل مسار شركات الطيران
 
 const createDefaultAdmin = async () => {
   try {
@@ -118,8 +120,9 @@ const startApp = async (appInstance) => {
   try {
     console.log("LOG: Starting server initialization...");
     await connectDB();
-    await loadCountryData(); // تحميل بيانات الدول أولاً
+    await loadCountryData();
     await loadAirportData(); 
+    await loadAirlineData(); // ✅ 3. استدعاء دالة تحميل شركات الطيران عند بدء التشغيل
     await initVectorServices();
     await createDefaultAdmin();
     await seedInitialRegulation();

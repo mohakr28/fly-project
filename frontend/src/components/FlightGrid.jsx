@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import FlightCardPro from "./FlightCardPro";
 import { FaSearch } from "react-icons/fa";
 
-// بطاقة هيكلية محسنة مع تأثير النبض
 const SkeletonCard = () => (
   <div className="bg-secondary rounded-lg shadow-sm p-4 animate-pulse space-y-4">
     <div className="flex justify-between items-center">
@@ -34,7 +33,7 @@ const gridVariants = {
   },
 };
 
-const FlightGrid = ({ flights, loading, monitoredAirports }) => {
+const FlightGrid = ({ flights, loading, monitoredAirports, airports }) => {
   const gridClasses = "grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6";
   const monitoredIataSet = new Set(monitoredAirports.map(a => a.iata));
 
@@ -65,7 +64,7 @@ const FlightGrid = ({ flights, loading, monitoredAirports }) => {
       exit="hidden"
     >
       {flights.map((flight) => (
-        <FlightCardPro key={flight._id} flight={flight} monitoredIataSet={monitoredIataSet} />
+        <FlightCardPro key={flight._id} flight={flight} monitoredIataSet={monitoredIataSet} airports={airports} />
       ))}
     </motion.div>
   );

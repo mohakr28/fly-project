@@ -32,13 +32,12 @@ const NavItem = ({ to, title, icon, isCollapsed, notificationCount }) => (
     title={title}
   >
     {icon}
-    <span
-      className={`${
-        isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-      } transition-all duration-200`}
-    >
-      {title}
-    </span>
+    {/* ✅ ==== التعديل هنا: عرض النص فقط إذا لم يكن الشريط مغلقًا ==== */}
+    {!isCollapsed && (
+      <span>
+        {title}
+      </span>
+    )}
     {notificationCount > 0 && (
       <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
         {notificationCount}
@@ -51,7 +50,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
   const [pendingEventsCount, setPendingEventsCount] = useState(0);
 
-  // حجم الأيقونات
   const iconSize = isCollapsed ? 32 : 24;
 
   useEffect(() => {
@@ -89,23 +87,22 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                      : "translate-x-0"
                  }`}
     >
-      {/* Header */}
       <div
         className={`flex items-center gap-3 px-2 pb-5 mb-5 border-b border-border-color ${
           isCollapsed ? "justify-center" : ""
         }`}
       >
         <FaPlaneDeparture className="text-accent flex-shrink-0" size={iconSize} />
-        <h2
-          className={`text-xl font-bold whitespace-nowrap text-text-primary transition-opacity duration-200 ${
-            isCollapsed ? "opacity-0 w-0" : "opacity-100"
-          }`}
-        >
-          JURAI
-        </h2>
+        {/* ✅ ==== التعديل هنا أيضًا ==== */}
+        {!isCollapsed && (
+          <h2
+            className={`text-xl font-bold whitespace-nowrap text-text-primary`}
+          >
+            JURAI
+          </h2>
+        )}
       </div>
 
-      {/* Navigation */}
       <nav className="flex flex-col gap-2 flex-grow">
         <NavItem
           to="/"
@@ -134,7 +131,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
         />
       </nav>
 
-      {/* Footer */}
       <div className="flex flex-col gap-2">
         <NavItem
           to="/profile"
@@ -150,16 +146,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
           title="Logout"
         >
           <FaSignOutAlt size={iconSize} />
-          <span
-            className={`${
-              isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-            } transition-all duration-200`}
-          >
-            Logout
-          </span>
+          {/* ✅ ==== التعديل هنا أيضًا ==== */}
+          {!isCollapsed && (
+            <span>
+              Logout
+            </span>
+          )}
         </button>
 
-        {/* Desktop Collapse Button */}
         <button
           onClick={toggleSidebar}
           className={`hidden md:flex items-center gap-4 p-3 rounded-lg font-semibold text-text-secondary hover:bg-tertiary transition-colors duration-200 ${
@@ -171,13 +165,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
           ) : (
             <FaAngleDoubleLeft size={iconSize - 4} />
           )}
-          <span
-            className={`${
-              isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-            } transition-all duration-200`}
-          >
-            {isCollapsed ? "Expand" : "Collapse"}
-          </span>
+          {/* ✅ ==== التعديل هنا أيضًا ==== */}
+          {!isCollapsed && (
+            <span>
+              {isCollapsed ? "Expand" : "Collapse"}
+            </span>
+          )}
         </button>
       </div>
     </aside>
