@@ -8,7 +8,7 @@ const { getAirportDetailsMap, getAvailableAirportsList } = require("../../servic
 // @route   GET /api/airports/details
 // @desc    Get a map of all airport details (IATA -> {name, timezone})
 // @access  Private
-router.get("/details", auth, (req, res) => {
+router.get("/details", (req, res) => {
   const airportMap = getAirportDetailsMap();
   res.json(airportMap);
 });
@@ -16,7 +16,7 @@ router.get("/details", auth, (req, res) => {
 // @route   GET /api/airports/available
 // @desc    Get paginated and filtered list of available airports
 // @access  Private
-router.get("/available", auth, (req, res) => {
+router.get("/available", (req, res) => {
   // ✅ 1. استخلاص معاملات الترقيم والفلترة
   const { 
     page = 1, 
@@ -132,7 +132,7 @@ router.delete("/:id", auth, async (req, res) => {
 // @route   GET /api/airports/countries
 // @desc    Get a unique list of all available countries
 // @access  Private
-router.get("/countries", auth, (req, res) => {
+router.get("/countries", (req, res) => {
     const allAirports = getAvailableAirportsList();
     const countries = [...new Set(allAirports.map(airport => airport.country))];
     countries.sort();
