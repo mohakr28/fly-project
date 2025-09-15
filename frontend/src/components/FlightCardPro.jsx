@@ -98,7 +98,7 @@ const getAnalysisAge = (dateString) => {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
   if (!isValid(date)) return "N/A";
-  return formatDistanceToNowStrict(date, { addSuffix: true });
+  return format(date, "dd MMM yyyy");
 };
 
 const FlightCardPro = ({ flight }) => {
